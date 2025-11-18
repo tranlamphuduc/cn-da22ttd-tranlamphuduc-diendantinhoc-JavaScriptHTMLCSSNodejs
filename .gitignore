@@ -1,6 +1,8 @@
 # ===================================
 # GENERAL
 # ===================================
+.gitignore
+.gitattributes
 .DS_Store
 .DS_Store?
 ._*
