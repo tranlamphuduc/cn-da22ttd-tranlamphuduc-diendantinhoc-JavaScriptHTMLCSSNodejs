@@ -25,7 +25,7 @@ Một diễn đàn trực tuyến hiện đại chuyên về lĩnh vực tin h�
 
 ### Backend
 - **Framework**: FastAPI (Python)
-- **Database**: MongoDB với Motor (async driver)
+- **Database**: Mysql
 - **Authentication**: JWT tokens
 - **File Storage**: GridFS
 - **Password Hashing**: bcrypt
@@ -44,13 +44,12 @@ Một diễn đàn trực tuyến hiện đại chuyên về lĩnh vực tin h�
 ### Yêu cầu hệ thống
 - Node.js 16+
 - Python 3.8+
-- MongoDB
+- Mysql
 - Git
 
 ### 1. Clone repository
 ```bash
-git clone https://github.com/yourusername/dien-dan-tin-hoc.git
-cd dien-dan-tin-hoc
+git clone https://github.com/tranlamphuduc/cn-da22ttd-tranlamphuduc-diendantinhoc-JavaScriptHTMLCSSNodejs.git
 ```
 
 ### 2. Cài đặt Backend
@@ -60,7 +59,7 @@ pip install -r requirements.txt
 
 # Tạo file .env
 cp .env.example .env
-# Cập nhật thông tin MongoDB và JWT secret trong .env
+# Cập nhật thông tin mysql và JWT secret trong .env
 
 # Chạy server
 uvicorn server:app --reload --host 0.0.0.0 --port 8000
@@ -116,10 +115,13 @@ dien-dan-tin-hoc/
 
 ### Backend (.env)
 ```env
-MONGO_URL=mongodb://localhost:27017
+PORT=5000
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=
 DB_NAME=dien_dan_tin_hoc
-JWT_SECRET_KEY=your-super-secret-jwt-key-change-this-in-production
-CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+JWT_SECRET=
+UPLOAD_PATH=uploads/
 ```
 
 ### Frontend (.env)
@@ -170,8 +172,8 @@ Dự án này được phát hành dưới [MIT License](LICENSE).
 ## 👨‍💻 Tác giả
 
 **Trần Lâm Phú Đức**
-- GitHub: [@yourusername](https://github.com/yourusername)
-- Email: your.email@example.com
+- GitHub: (https://github.com/tranlamphuduc)
+- Email: tranlamphuducc3tieucan22@gmail.com
 
 ## 🙏 Acknowledgments
 
@@ -181,4 +183,3 @@ Dự án này được phát hành dưới [MIT License](LICENSE).
 
 ---
 
-⭐ Nếu dự án này hữu ích, hãy cho một star nhé!
