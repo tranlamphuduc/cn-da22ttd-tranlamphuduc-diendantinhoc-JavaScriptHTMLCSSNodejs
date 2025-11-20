@@ -49,6 +49,7 @@ router.get('/', async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const category = req.query.category;
     const search = req.query.search;
+    const sortBy = req.query.sortBy || 'newest'; // newest, oldest, most_downloaded, least_downloaded
     const offset = (page - 1) * limit;
 
     let query = `
@@ -71,7 +72,23 @@ router.get('/', async (req, res) => {
       params.push(`%${search}%`, `%${search}%`);
     }
 
-    query += ' ORDER BY d.created_at DESC LIMIT ? OFFSET ?';
+    // Thêm sắp xếp theo lựa chọn
+    let orderBy = 'd.created_at DESC'; // mặc định
+    switch (sortBy) {
+      case 'oldest':
+        orderBy = 'd.created_at ASC';
+        break;
+      case 'most_downloaded':
+        orderBy = 'd.downloads DESC';
+        break;
+      case 'least_downloaded':
+        orderBy = 'd.downloads ASC';
+        break;
+      default:
+        orderBy = 'd.created_at DESC';
+    }
+
+    query += ` ORDER BY ${orderBy} LIMIT ? OFFSET ?`;
     params.push(limit, offset);
 
     const [documents] = await db.execute(query, params);

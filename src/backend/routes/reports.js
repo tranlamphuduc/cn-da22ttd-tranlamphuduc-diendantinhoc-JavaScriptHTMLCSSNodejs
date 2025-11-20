@@ -88,8 +88,42 @@ router.post('/',
 
             const connection = await mysql.createConnection(dbConfig);
 
-            // Kiểm tra xem đã báo cáo trước đó chưa
-            let checkQuery = 'SELECT id FROM reports WHERE reporter_id = ? AND report_type = ? AND status IN ("pending", "reviewed")';
+            // Kiểm tra xem người dùng có bị cấm báo cáo không
+            const [warningCheck] = await connection.execute(
+                'SELECT * FROM report_warnings WHERE user_id = ? AND (is_banned_from_reporting = TRUE AND (ban_until IS NULL OR ban_until > NOW()))',
+                [reporter_id]
+            );
+
+            if (warningCheck.length > 0) {
+                const banUntil = warningCheck[0].ban_until;
+                const banMessage = banUntil 
+                    ? `Bạn đã bị cấm báo cáo đến ${new Date(banUntil).toLocaleString('vi-VN')} do báo cáo sai nhiều lần`
+                    : 'Bạn đã bị cấm báo cáo vĩnh viễn do báo cáo sai 5 lần trong vòng 3 tháng';
+                
+                await connection.end();
+                return res.status(403).json({ 
+                    message: banMessage,
+                    banned: true,
+                    ban_until: banUntil
+                });
+            }
+
+            // Kiểm tra số lượng báo cáo đang chờ xử lý (tối đa 3)
+            const [pendingReports] = await connection.execute(
+                'SELECT COUNT(*) as count FROM reports WHERE reporter_id = ? AND status IN ("pending", "reviewed")',
+                [reporter_id]
+            );
+
+            if (pendingReports[0].count >= 3) {
+                await connection.end();
+                return res.status(400).json({ 
+                    message: 'Bạn đã có 3 báo cáo đang chờ xử lý. Vui lòng đợi quản trị viên xử lý xong trước khi gửi báo cáo mới.',
+                    pending_count: pendingReports[0].count
+                });
+            }
+
+            // Kiểm tra xem đã báo cáo nội dung này trước đó chưa
+            let checkQuery = 'SELECT id FROM reports WHERE reporter_id = ? AND report_type = ?';
             let checkParams = [reporter_id, report_type];
             
             if (report_type === 'user' && reported_user_id) {
@@ -128,7 +162,8 @@ router.post('/',
 
             res.status(201).json({
                 message: 'Báo cáo đã được gửi thành công',
-                report_id: result.insertId
+                report_id: result.insertId,
+                pending_count: pendingReports[0].count + 1
             });
 
         } catch (error) {
@@ -212,7 +247,8 @@ router.put('/:id/status',
     requireAdmin,
     [
         body('status').isIn(['reviewed', 'resolved', 'dismissed']).withMessage('Trạng thái không hợp lệ'),
-        body('admin_note').optional().isLength({ max: 500 }).withMessage('Ghi chú không được quá 500 ký tự')
+        body('admin_note').optional().isLength({ max: 500 }).withMessage('Ghi chú không được quá 500 ký tự'),
+        body('is_false_report').optional().isBoolean().withMessage('is_false_report phải là boolean')
     ],
     async (req, res) => {
         try {
@@ -222,7 +258,7 @@ router.put('/:id/status',
             }
 
             const { id } = req.params;
-            const { status, admin_note } = req.body;
+            const { status, admin_note, is_false_report = false } = req.body;
             const reviewed_by = req.user.id;
 
             const connection = await mysql.createConnection(dbConfig);
@@ -238,11 +274,18 @@ router.put('/:id/status',
                 return res.status(404).json({ message: 'Không tìm thấy báo cáo' });
             }
 
-            // Cập nhật trạng thái
+            const report = reports[0];
+
+            // Cập nhật trạng thái báo cáo
             await connection.execute(
-                'UPDATE reports SET status = ?, admin_note = ?, reviewed_by = ?, reviewed_at = NOW() WHERE id = ?',
-                [status, admin_note || null, reviewed_by, id]
+                'UPDATE reports SET status = ?, admin_note = ?, reviewed_by = ?, reviewed_at = NOW(), is_false_report = ? WHERE id = ?',
+                [status, admin_note || null, reviewed_by, is_false_report, id]
             );
+
+            // Nếu báo cáo bị đánh dấu là sai, xử lý cảnh báo cho người báo cáo
+            if (is_false_report && (status === 'dismissed' || status === 'resolved')) {
+                await handleFalseReportWarning(connection, report.reporter_id);
+            }
 
             await connection.end();
 
@@ -254,6 +297,217 @@ router.put('/:id/status',
         }
     }
 );
+
+// Hàm xử lý cảnh báo báo cáo sai
+async function handleFalseReportWarning(connection, userId) {
+    try {
+        // Kiểm tra xem user đã có record cảnh báo chưa
+        const [existingWarning] = await connection.execute(
+            'SELECT * FROM report_warnings WHERE user_id = ?',
+            [userId]
+        );
+
+        if (existingWarning.length === 0) {
+            // Tạo record cảnh báo mới
+            await connection.execute(
+                'INSERT INTO report_warnings (user_id, warning_count, last_warning_at) VALUES (?, 1, NOW())',
+                [userId]
+            );
+        } else {
+            const currentWarnings = existingWarning[0].warning_count;
+            const newWarningCount = currentWarnings + 1;
+            
+            // Cập nhật số lần cảnh báo
+            await connection.execute(
+                'UPDATE report_warnings SET warning_count = ?, last_warning_at = NOW() WHERE user_id = ?',
+                [newWarningCount, userId]
+            );
+        }
+
+        // Kiểm tra số lần báo cáo sai trong khoảng thời gian
+        const [recentWarnings1Month] = await connection.execute(
+            'SELECT COUNT(*) as count FROM reports WHERE reporter_id = ? AND is_false_report = TRUE AND created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)',
+            [userId]
+        );
+
+        const [recentWarnings3Months] = await connection.execute(
+            'SELECT COUNT(*) as count FROM reports WHERE reporter_id = ? AND is_false_report = TRUE AND created_at >= DATE_SUB(NOW(), INTERVAL 3 MONTH)',
+            [userId]
+        );
+
+        const warnings1Month = recentWarnings1Month[0].count;
+        const warnings3Months = recentWarnings3Months[0].count;
+
+        let shouldBan = false;
+        let banDuration = null;
+        let banMessage = '';
+
+        // Kiểm tra điều kiện cấm báo cáo
+        if (warnings3Months >= 5) {
+            // Cấm báo cáo vĩnh viễn nếu có 5 lần báo cáo sai trong 3 tháng
+            shouldBan = true;
+            banDuration = null; // Vĩnh viễn
+            banMessage = 'Bạn đã bị cấm báo cáo vĩnh viễn do báo cáo sai 5 lần trong vòng 3 tháng. Vui lòng liên hệ quản trị viên nếu có thắc mắc.';
+        } else if (warnings1Month >= 3) {
+            // Cấm báo cáo 30 ngày nếu có 3 lần báo cáo sai trong 1 tháng
+            shouldBan = true;
+            banDuration = 'DATE_ADD(NOW(), INTERVAL 30 DAY)';
+            banMessage = `Bạn đã bị cấm báo cáo trong 30 ngày do báo cáo sai ${warnings1Month} lần trong vòng 1 tháng.`;
+        }
+
+        // Cập nhật trạng thái cấm nếu cần
+        if (shouldBan) {
+            if (banDuration) {
+                await connection.execute(
+                    `UPDATE report_warnings SET is_banned_from_reporting = TRUE, ban_until = ${banDuration} WHERE user_id = ?`,
+                    [userId]
+                );
+            } else {
+                await connection.execute(
+                    'UPDATE report_warnings SET is_banned_from_reporting = TRUE, ban_until = NULL WHERE user_id = ?',
+                    [userId]
+                );
+            }
+        }
+
+        // Tạo thông báo cho người dùng về cảnh báo
+        const { createNotification } = require('./notifications');
+        const [warningInfo] = await connection.execute(
+            'SELECT * FROM report_warnings WHERE user_id = ?',
+            [userId]
+        );
+
+        if (warningInfo.length > 0) {
+            const warning = warningInfo[0];
+            let notificationMessage = '';
+            
+            if (shouldBan) {
+                notificationMessage = banMessage;
+            } else {
+                notificationMessage = `Bạn đã nhận cảnh báo lần ${warning.warning_count} do gửi báo cáo không chính xác. Hiện tại bạn có ${warnings1Month} báo cáo sai trong 1 tháng và ${warnings3Months} báo cáo sai trong 3 tháng. Nếu tiếp tục báo cáo sai, bạn sẽ bị cấm báo cáo.`;
+            }
+
+            await createNotification(
+                userId,
+                'report_warning',
+                'Cảnh báo báo cáo sai',
+                notificationMessage,
+                null
+            );
+        }
+
+    } catch (error) {
+        console.error('Error handling false report warning:', error);
+    }
+}
+
+// Lấy báo cáo của người dùng hiện tại
+router.get('/my-reports', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { page = 1, limit = 20 } = req.query;
+        const offset = (page - 1) * limit;
+
+        const connection = await mysql.createConnection(dbConfig);
+
+        // Lấy danh sách báo cáo của user
+        const [reports] = await connection.execute(
+            `SELECT r.*, 
+                    CASE 
+                        WHEN r.report_type = 'user' THEN u.full_name
+                        WHEN r.report_type = 'post' THEN p.title
+                        WHEN r.report_type = 'document' THEN d.title
+                    END as reported_content_name
+             FROM reports r
+             LEFT JOIN users u ON r.reported_user_id = u.id
+             LEFT JOIN posts p ON r.reported_post_id = p.id
+             LEFT JOIN documents d ON r.reported_document_id = d.id
+             WHERE r.reporter_id = ?
+             ORDER BY r.created_at DESC
+             LIMIT ? OFFSET ?`,
+            [userId, parseInt(limit), parseInt(offset)]
+        );
+
+        // Đếm tổng số báo cáo
+        const [countResult] = await connection.execute(
+            'SELECT COUNT(*) as total FROM reports WHERE reporter_id = ?',
+            [userId]
+        );
+
+        await connection.end();
+
+        res.json({
+            reports,
+            pagination: {
+                current_page: parseInt(page),
+                total_pages: Math.ceil(countResult[0].total / limit),
+                total_reports: countResult[0].total,
+                per_page: parseInt(limit)
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching user reports:', error);
+        res.status(500).json({ message: 'Lỗi server khi lấy báo cáo' });
+    }
+});
+
+// Kiểm tra trạng thái báo cáo của người dùng
+router.get('/my-status', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const connection = await mysql.createConnection(dbConfig);
+
+        // Lấy thông tin cảnh báo
+        const [warnings] = await connection.execute(
+            'SELECT * FROM report_warnings WHERE user_id = ?',
+            [userId]
+        );
+
+        // Đếm số báo cáo đang chờ xử lý
+        const [pendingReports] = await connection.execute(
+            'SELECT COUNT(*) as count FROM reports WHERE reporter_id = ? AND status IN ("pending", "reviewed")',
+            [userId]
+        );
+
+        // Lấy lịch sử báo cáo gần đây
+        const [recentReports] = await connection.execute(
+            `SELECT r.*, 
+                    CASE 
+                        WHEN r.report_type = 'user' THEN u.full_name
+                        WHEN r.report_type = 'post' THEN p.title
+                        WHEN r.report_type = 'document' THEN d.title
+                    END as reported_content_name
+             FROM reports r
+             LEFT JOIN users u ON r.reported_user_id = u.id
+             LEFT JOIN posts p ON r.reported_post_id = p.id
+             LEFT JOIN documents d ON r.reported_document_id = d.id
+             WHERE r.reporter_id = ?
+             ORDER BY r.created_at DESC
+             LIMIT 10`,
+            [userId]
+        );
+
+        await connection.end();
+
+        const warningInfo = warnings.length > 0 ? warnings[0] : null;
+        const isBanned = warningInfo && warningInfo.is_banned_from_reporting && 
+                        (warningInfo.ban_until === null || new Date(warningInfo.ban_until) > new Date());
+
+        res.json({
+            warning_count: warningInfo ? warningInfo.warning_count : 0,
+            is_banned: isBanned,
+            ban_until: warningInfo ? warningInfo.ban_until : null,
+            pending_reports_count: pendingReports[0].count,
+            can_report: !isBanned && pendingReports[0].count < 3,
+            recent_reports: recentReports
+        });
+
+    } catch (error) {
+        console.error('Error fetching user report status:', error);
+        res.status(500).json({ message: 'Lỗi server khi lấy trạng thái báo cáo' });
+    }
+});
 
 // Lấy thống kê báo cáo (chỉ admin)
 router.get('/statistics', authenticateToken, requireAdmin, async (req, res) => {

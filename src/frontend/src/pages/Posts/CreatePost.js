@@ -247,6 +247,20 @@ const CreatePost = () => {
                       </button>
                       <button 
                         type="button" 
+                        className="btn btn-outline-danger"
+                        onClick={() => {
+                          const textarea = document.getElementById('content');
+                          const start = textarea.selectionStart;
+                          const text = textarea.value;
+                          const newText = text.substring(0, start) + '\nhttps://www.youtube.com/watch?v=VIDEO_ID\n' + text.substring(start);
+                          setFormData({...formData, content: newText});
+                        }}
+                        title="YouTube Video"
+                      >
+                        <i className="fab fa-youtube"></i>
+                      </button>
+                      <button 
+                        type="button" 
                         className="btn btn-outline-secondary"
                         onClick={() => {
                           const textarea = document.getElementById('content');
@@ -274,7 +288,24 @@ const CreatePost = () => {
                   />
                   <small className="form-text text-muted">
                     Bạn có thể sử dụng Markdown để định dạng văn bản. Ví dụ: **in đậm**, *in nghiêng*, `code`, etc.
+                    <br />
+                    <strong>Video YouTube:</strong> Dán link YouTube trên dòng riêng biệt để tự động embed video.
                   </small>
+                  
+                  {/* YouTube Help */}
+                  <div className="alert alert-info mt-2" role="alert">
+                    <div className="d-flex align-items-start">
+                      <i className="fab fa-youtube text-danger me-2 mt-1"></i>
+                      <div>
+                        <strong>Cách thêm video YouTube:</strong>
+                        <ol className="mb-0 mt-1">
+                          <li>Sao chép link YouTube (ví dụ: https://www.youtube.com/watch?v=dQw4w9WgXcQ)</li>
+                          <li>Dán link trên một dòng riêng biệt trong nội dung</li>
+                          <li>Video sẽ tự động hiển thị khi đăng bài</li>
+                        </ol>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="d-flex justify-content-between">

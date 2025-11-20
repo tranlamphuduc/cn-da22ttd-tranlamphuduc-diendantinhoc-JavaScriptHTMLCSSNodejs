@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../config/database');
 const { adminAuth } = require('../middleware/auth');
+const { createNotification } = require('./notifications');
 
 const router = express.Router();
 
@@ -157,16 +158,39 @@ router.get('/posts', adminAuth, async (req, res) => {
   }
 });
 
-// Xóa bài viết
+// Xóa bài viết với lý do
 router.delete('/posts/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params;
+    const { reason } = req.body;
     
-    const [result] = await db.execute('DELETE FROM posts WHERE id = ?', [id]);
+    if (!reason || reason.trim().length === 0) {
+      return res.status(400).json({ message: 'Vui lòng nhập lý do xóa bài viết' });
+    }
+
+    // Lấy thông tin bài viết trước khi xóa
+    const [posts] = await db.execute(
+      'SELECT user_id, title FROM posts WHERE id = ?',
+      [id]
+    );
     
-    if (result.affectedRows === 0) {
+    if (posts.length === 0) {
       return res.status(404).json({ message: 'Không tìm thấy bài viết' });
     }
+
+    const post = posts[0];
+
+    // Xóa bài viết
+    const [result] = await db.execute('DELETE FROM posts WHERE id = ?', [id]);
+
+    // Tạo thông báo cho tác giả
+    await createNotification(
+      post.user_id,
+      'post_deleted',
+      'Bài viết bị xóa',
+      `Bài viết "${post.title}" của bạn đã bị xóa bởi quản trị viên. Lý do: ${reason.trim()}`,
+      id
+    );
 
     res.json({ message: 'Đã xóa bài viết thành công' });
   } catch (error) {
@@ -208,28 +232,47 @@ router.get('/documents', adminAuth, async (req, res) => {
   }
 });
 
-// Xóa tài liệu
+// Xóa tài liệu với lý do
 router.delete('/documents/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params;
+    const { reason } = req.body;
     const fs = require('fs');
     const path = require('path');
     
+    if (!reason || reason.trim().length === 0) {
+      return res.status(400).json({ message: 'Vui lòng nhập lý do xóa tài liệu' });
+    }
+    
     // Lấy thông tin file trước khi xóa
-    const [documents] = await db.execute('SELECT file_path FROM documents WHERE id = ?', [id]);
+    const [documents] = await db.execute(
+      'SELECT user_id, title, file_path FROM documents WHERE id = ?', 
+      [id]
+    );
     
     if (documents.length === 0) {
       return res.status(404).json({ message: 'Không tìm thấy tài liệu' });
     }
 
+    const document = documents[0];
+
     // Xóa file khỏi hệ thống
-    const filePath = path.join(__dirname, '../uploads', documents[0].file_path);
+    const filePath = path.join(__dirname, '../uploads', document.file_path);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
 
     // Xóa record khỏi database
     const [result] = await db.execute('DELETE FROM documents WHERE id = ?', [id]);
+
+    // Tạo thông báo cho tác giả
+    await createNotification(
+      document.user_id,
+      'document_deleted',
+      'Tài liệu bị xóa',
+      `Tài liệu "${document.title}" của bạn đã bị xóa bởi quản trị viên. Lý do: ${reason.trim()}`,
+      id
+    );
 
     res.json({ message: 'Đã xóa tài liệu thành công' });
   } catch (error) {
@@ -250,11 +293,12 @@ router.get('/comments', adminAuth, async (req, res) => {
       FROM comments c
       JOIN users u ON c.user_id = u.id
       JOIN posts p ON c.post_id = p.id
+      WHERE c.is_approved = TRUE
       ORDER BY c.created_at DESC
       LIMIT ? OFFSET ?
     `, [limit, offset]);
 
-    const [totalCount] = await db.execute('SELECT COUNT(*) as count FROM comments');
+    const [totalCount] = await db.execute('SELECT COUNT(*) as count FROM comments WHERE is_approved = TRUE');
 
     res.json({
       comments,
@@ -271,16 +315,43 @@ router.get('/comments', adminAuth, async (req, res) => {
   }
 });
 
-// Xóa bình luận
+// Xóa bình luận với lý do
 router.delete('/comments/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params;
+    const { reason } = req.body;
     
-    const [result] = await db.execute('DELETE FROM comments WHERE id = ?', [id]);
+    if (!reason || reason.trim().length === 0) {
+      return res.status(400).json({ message: 'Vui lòng nhập lý do xóa bình luận' });
+    }
+
+    // Lấy thông tin bình luận trước khi xóa
+    const [comments] = await db.execute(
+      'SELECT c.user_id, c.content, p.title as post_title FROM comments c JOIN posts p ON c.post_id = p.id WHERE c.id = ?',
+      [id]
+    );
     
-    if (result.affectedRows === 0) {
+    if (comments.length === 0) {
       return res.status(404).json({ message: 'Không tìm thấy bình luận' });
     }
+
+    const comment = comments[0];
+
+    // Xóa bình luận
+    const [result] = await db.execute('DELETE FROM comments WHERE id = ?', [id]);
+
+    // Tạo thông báo cho tác giả bình luận
+    const commentPreview = comment.content.length > 50 
+      ? comment.content.substring(0, 50) + '...' 
+      : comment.content;
+
+    await createNotification(
+      comment.user_id,
+      'comment_deleted',
+      'Bình luận bị xóa',
+      `Bình luận "${commentPreview}" của bạn trong bài viết "${comment.post_title}" đã bị xóa bởi quản trị viên. Lý do: ${reason.trim()}`,
+      id
+    );
 
     res.json({ message: 'Đã xóa bình luận thành công' });
   } catch (error) {

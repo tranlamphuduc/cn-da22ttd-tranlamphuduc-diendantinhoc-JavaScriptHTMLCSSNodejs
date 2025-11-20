@@ -9,6 +9,7 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -18,7 +19,7 @@ const Home = () => {
 
   useEffect(() => {
     fetchData();
-  }, [selectedCategory, searchTerm, pagination.page]);
+  }, [selectedCategory, searchTerm, sortBy, pagination.page]);
 
   const fetchData = async () => {
     try {
@@ -27,6 +28,7 @@ const Home = () => {
           params: {
             category: selectedCategory,
             search: searchTerm,
+            sortBy: sortBy,
             page: pagination.page,
             limit: pagination.limit
           }
@@ -59,6 +61,8 @@ const Home = () => {
       setSelectedCategory(value);
     } else if (filterType === 'search') {
       setSearchTerm(value);
+    } else if (filterType === 'sort') {
+      setSortBy(value);
     }
   };
 
@@ -73,8 +77,22 @@ const Home = () => {
   };
 
   const truncateContent = (content, maxLength = 150) => {
-    if (content.length <= maxLength) return content;
-    return content.substring(0, maxLength) + '...';
+    // Loại bỏ các ký tự Markdown cơ bản để hiển thị text thuần
+    const plainText = content
+      .replace(/#{1,6}\s+/g, '') // Headers
+      .replace(/\*\*(.*?)\*\*/g, '$1') // Bold
+      .replace(/\*(.*?)\*/g, '$1') // Italic
+      .replace(/`(.*?)`/g, '$1') // Inline code
+      .replace(/```[\s\S]*?```/g, '[Code Block]') // Code blocks
+      .replace(/!\[.*?\]\(.*?\)/g, '[Image]') // Images
+      .replace(/\[.*?\]\(.*?\)/g, '[Link]') // Links
+      .replace(/>\s+/g, '') // Blockquotes
+      .replace(/[-*+]\s+/g, '') // Lists
+      .replace(/\d+\.\s+/g, '') // Numbered lists
+      .trim();
+    
+    if (plainText.length <= maxLength) return plainText;
+    return plainText.substring(0, maxLength) + '...';
   };
 
   if (loading) {
@@ -96,7 +114,7 @@ const Home = () => {
           <div className="card mb-4">
             <div className="card-body">
               <div className="row">
-                <div className="col-md-8">
+                <div className="col-md-5">
                   <input
                     type="text"
                     className="form-control"
@@ -117,6 +135,18 @@ const Home = () => {
                         {category.name}
                       </option>
                     ))}
+                  </select>
+                </div>
+                <div className="col-md-3">
+                  <select
+                    className="form-select"
+                    value={sortBy}
+                    onChange={(e) => handleFilterChange('sort', e.target.value)}
+                  >
+                    <option value="newest">Mới nhất</option>
+                    <option value="oldest">Cũ nhất</option>
+                    <option value="most_viewed">Xem nhiều nhất</option>
+                    <option value="least_viewed">Xem ít nhất</option>
                   </select>
                 </div>
               </div>

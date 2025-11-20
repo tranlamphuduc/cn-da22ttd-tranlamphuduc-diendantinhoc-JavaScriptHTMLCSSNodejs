@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Pagination from '../../components/Pagination/Pagination';
+import DeleteConfirmModal from '../../components/Admin/DeleteConfirmModal';
 
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
@@ -9,6 +10,7 @@ const Dashboard = () => {
   const [reports, setReports] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [reportFilters, setReportFilters] = useState({ status: '', report_type: '' });
@@ -24,6 +26,36 @@ const Dashboard = () => {
     comments: { page: 1, limit: 10, total: 0, pages: 0 }
   });
 
+  // States for delete modal
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    type: '',
+    item: null,
+    loading: false
+  });
+
+  // States for report processing modal
+  const [reportModal, setReportModal] = useState({
+    isOpen: false,
+    report: null,
+    loading: false
+  });
+
+  const [reportForm, setReportForm] = useState({
+    status: '',
+    admin_note: '',
+    is_false_report: false
+  });
+
+  // States for search functionality
+  const [searchTerms, setSearchTerms] = useState({
+    users: '',
+    posts: '',
+    documents: '',
+    comments: '',
+    reports: ''
+  });
+
   useEffect(() => {
     fetchDashboardData();
   }, [pagination.users.page, pagination.posts.page]);
@@ -35,8 +67,10 @@ const Dashboard = () => {
       fetchDocuments();
     } else if (activeTab === 'categories') {
       fetchCategories();
+    } else if (activeTab === 'comments') {
+      fetchComments();
     }
-  }, [activeTab, reportFilters, pagination.documents.page]);
+  }, [activeTab, reportFilters, pagination.documents.page, pagination.comments.page]);
 
   const fetchDashboardData = async () => {
     try {
@@ -107,6 +141,23 @@ const Dashboard = () => {
     }
   };
 
+  const fetchComments = async () => {
+    try {
+      const response = await axios.get(`/api/admin/comments?page=${pagination.comments.page}&limit=${pagination.comments.limit}`);
+      setComments(response.data.comments);
+      setPagination(prev => ({
+        ...prev,
+        comments: {
+          ...prev.comments,
+          total: response.data.pagination.total,
+          pages: response.data.pagination.pages
+        }
+      }));
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    }
+  };
+
   const handlePageChange = (tabType, newPage) => {
     setPagination(prev => ({
       ...prev,
@@ -124,62 +175,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleCategorySubmit = async (e) => {
-    e.preventDefault();
-    setActionLoading(true);
-
-    try {
-      if (editingCategory) {
-        // Cập nhật danh mục
-        await axios.put(`/api/admin/categories/${editingCategory.id}`, categoryForm);
-        alert('Cập nhật danh mục thành công!');
-      } else {
-        // Tạo danh mục mới
-        await axios.post('/api/admin/categories', categoryForm);
-        alert('Tạo danh mục thành công!');
-      }
-
-      fetchCategories();
-      setShowCategoryModal(false);
-      setCategoryForm({ name: '', description: '', color: '#007bff' });
-      setEditingCategory(null);
-    } catch (error) {
-      console.error('Error saving category:', error);
-      alert('Có lỗi xảy ra khi lưu danh mục');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleEditCategory = (category) => {
-    setEditingCategory(category);
-    setCategoryForm({
-      name: category.name,
-      description: category.description || '',
-      color: category.color || '#007bff'
-    });
-    setShowCategoryModal(true);
-  };
-
-  const handleDeleteCategory = async (categoryId, categoryName) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa danh mục "${categoryName}"? Tất cả bài viết và tài liệu trong danh mục này sẽ bị ảnh hưởng.`)) {
-      try {
-        await axios.delete(`/api/admin/categories/${categoryId}`);
-        setCategories(categories.filter(cat => cat.id !== categoryId));
-        alert('Đã xóa danh mục thành công');
-      } catch (error) {
-        console.error('Error deleting category:', error);
-        alert('Có lỗi xảy ra khi xóa danh mục');
-      }
-    }
-  };
-
-  const openCreateCategoryModal = () => {
-    setEditingCategory(null);
-    setCategoryForm({ name: '', description: '', color: '#007bff' });
-    setShowCategoryModal(true);
-  };
-
   const toggleUserStatus = async (userId, currentStatus) => {
     try {
       await axios.patch(`/api/admin/users/${userId}/toggle-status`);
@@ -191,57 +186,258 @@ const Dashboard = () => {
     }
   };
 
-  const deletePost = async (postId) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
-      try {
-        await axios.delete(`/api/admin/posts/${postId}`);
-        setPosts(posts.filter(post => post.id !== postId));
-        fetchDashboardData(); // Refresh stats
-      } catch (error) {
-        console.error('Error deleting post:', error);
-        alert('Có lỗi xảy ra khi xóa bài viết');
-      }
-    }
+  // Mở modal xóa bài viết
+  const openDeletePostModal = (post) => {
+    setDeleteModal({
+      isOpen: true,
+      type: 'post',
+      item: post,
+      loading: false
+    });
   };
 
-  const deleteDocument = async (documentId) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa tài liệu này?')) {
-      try {
-        await axios.delete(`/api/admin/documents/${documentId}`);
-        setDocuments(documents.filter(doc => doc.id !== documentId));
-        fetchDashboardData(); // Refresh stats
-      } catch (error) {
-        console.error('Error deleting document:', error);
-        alert('Có lỗi xảy ra khi xóa tài liệu');
-      }
-    }
+  // Mở modal xóa tài liệu
+  const openDeleteDocumentModal = (document) => {
+    setDeleteModal({
+      isOpen: true,
+      type: 'document',
+      item: document,
+      loading: false
+    });
   };
 
-  const handleReportStatusChange = async (reportId, newStatus, adminNote = '') => {
-    setActionLoading(true);
+  // Mở modal xóa bình luận
+  const openDeleteCommentModal = (comment) => {
+    setDeleteModal({
+      isOpen: true,
+      type: 'comment',
+      item: comment,
+      loading: false
+    });
+  };
+
+  // Mở modal xử lý báo cáo
+  const openReportModal = (report) => {
+    setReportModal({
+      isOpen: true,
+      report: report,
+      loading: false
+    });
+    setReportForm({
+      status: report.status,
+      admin_note: report.admin_note || '',
+      is_false_report: report.is_false_report || false
+    });
+  };
+
+  // Đóng modal xử lý báo cáo
+  const closeReportModal = () => {
+    setReportModal({
+      isOpen: false,
+      report: null,
+      loading: false
+    });
+    setReportForm({
+      status: '',
+      admin_note: '',
+      is_false_report: false
+    });
+  };
+
+  // Xử lý báo cáo
+  const handleReportSubmit = async (e) => {
+    e.preventDefault();
+    setReportModal(prev => ({ ...prev, loading: true }));
+
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`/api/reports/${reportId}/status`, {
-        status: newStatus,
-        admin_note: adminNote
+      await axios.put(`/api/reports/${reportModal.report.id}/status`, {
+        status: reportForm.status,
+        admin_note: reportForm.admin_note,
+        is_false_report: reportForm.is_false_report
       }, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      fetchReports();
-      fetchDashboardData(); // Refresh stats
-      setSelectedReport(null);
-      alert('Cập nhật trạng thái báo cáo thành công!');
+      // Cập nhật danh sách báo cáo
+      setReports(reports.map(report => 
+        report.id === reportModal.report.id 
+          ? { 
+              ...report, 
+              status: reportForm.status, 
+              admin_note: reportForm.admin_note, 
+              is_false_report: reportForm.is_false_report,
+              reviewed_at: new Date().toISOString()
+            }
+          : report
+      ));
+
+      alert('Đã cập nhật trạng thái báo cáo thành công');
+      closeReportModal();
     } catch (error) {
-      console.error('Error updating report status:', error);
+      console.error('Error updating report:', error);
       alert('Có lỗi xảy ra khi cập nhật báo cáo');
+    } finally {
+      setReportModal(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  // Category management functions
+  const openCategoryModal = (category = null) => {
+    setEditingCategory(category);
+    setCategoryForm({
+      name: category ? category.name : '',
+      description: category ? category.description : '',
+      color: category ? category.color : '#007bff'
+    });
+    setShowCategoryModal(true);
+  };
+
+  const closeCategoryModal = () => {
+    setShowCategoryModal(false);
+    setEditingCategory(null);
+    setCategoryForm({ name: '', description: '', color: '#007bff' });
+  };
+
+  const handleCategorySubmit = async (e) => {
+    e.preventDefault();
+    setActionLoading(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (editingCategory) {
+        // Update category
+        await axios.put(`/api/admin/categories/${editingCategory.id}`, categoryForm, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        alert('Đã cập nhật danh mục thành công');
+      } else {
+        // Create new category
+        await axios.post('/api/admin/categories', categoryForm, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        alert('Đã tạo danh mục mới thành công');
+      }
+
+      fetchCategories();
+      closeCategoryModal();
+    } catch (error) {
+      console.error('Error saving category:', error);
+      alert(error.response?.data?.message || 'Có lỗi xảy ra khi lưu danh mục');
     } finally {
       setActionLoading(false);
     }
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString('vi-VN');
+  const handleDeleteCategory = async (categoryId, categoryName) => {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa danh mục "${categoryName}"?`)) {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.delete(`/api/admin/categories/${categoryId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        alert('Đã xóa danh mục thành công');
+        fetchCategories();
+      } catch (error) {
+        console.error('Error deleting category:', error);
+        alert(error.response?.data?.message || 'Có lỗi xảy ra khi xóa danh mục');
+      }
+    }
+  };
+
+  // Search functionality
+  const handleSearchChange = (tabType, value) => {
+    setSearchTerms(prev => ({ ...prev, [tabType]: value }));
+  };
+
+  // Filter data based on search terms
+  const getFilteredData = (data, tabType) => {
+    const searchTerm = searchTerms[tabType].toLowerCase();
+    if (!searchTerm) return data;
+
+    return data.filter(item => {
+      switch (tabType) {
+        case 'users':
+          return item.full_name.toLowerCase().includes(searchTerm) ||
+                 item.username.toLowerCase().includes(searchTerm) ||
+                 item.email.toLowerCase().includes(searchTerm);
+        case 'posts':
+          return item.title.toLowerCase().includes(searchTerm) ||
+                 item.full_name.toLowerCase().includes(searchTerm) ||
+                 item.category_name.toLowerCase().includes(searchTerm);
+        case 'documents':
+          return item.title.toLowerCase().includes(searchTerm) ||
+                 item.full_name.toLowerCase().includes(searchTerm) ||
+                 item.category_name.toLowerCase().includes(searchTerm);
+        case 'comments':
+          return item.content.toLowerCase().includes(searchTerm) ||
+                 item.full_name.toLowerCase().includes(searchTerm) ||
+                 item.post_title.toLowerCase().includes(searchTerm);
+        case 'reports':
+          return item.reporter_name.toLowerCase().includes(searchTerm) ||
+                 (item.reported_content_name && item.reported_content_name.toLowerCase().includes(searchTerm));
+        default:
+          return true;
+      }
+    });
+  };
+
+  // Get report target URL
+  const getReportTargetUrl = (report) => {
+    if (report.report_type === 'post' && report.reported_post_id) {
+      return `/posts/${report.reported_post_id}`;
+    } else if (report.report_type === 'user' && report.reported_user_id) {
+      return `/profile/${report.reported_user_id}`;
+    } else if (report.report_type === 'document' && report.reported_document_id) {
+      return `/documents/${report.reported_document_id}`;
+    }
+    return null;
+  };
+
+  // Xử lý xóa với lý do
+  const handleDeleteWithReason = async (reason) => {
+    setDeleteModal(prev => ({ ...prev, loading: true }));
+
+    try {
+      const token = localStorage.getItem('token');
+      const { type, item } = deleteModal;
+
+      if (type === 'post') {
+        await axios.delete(`/api/admin/posts/${item.id}`, {
+          data: { reason },
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        setPosts(posts.filter(post => post.id !== item.id));
+        alert('Đã xóa bài viết thành công và gửi thông báo cho tác giả');
+      } else if (type === 'document') {
+        await axios.delete(`/api/admin/documents/${item.id}`, {
+          data: { reason },
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        setDocuments(documents.filter(doc => doc.id !== item.id));
+        alert('Đã xóa tài liệu thành công và gửi thông báo cho tác giả');
+      } else if (type === 'comment') {
+        await axios.delete(`/api/admin/comments/${item.id}`, {
+          data: { reason },
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        setComments(comments.filter(comment => comment.id !== item.id));
+        alert('Đã xóa bình luận thành công và gửi thông báo cho tác giả');
+      }
+
+      fetchDashboardData(); // Refresh stats
+      setDeleteModal({ isOpen: false, type: '', item: null, loading: false });
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      alert('Có lỗi xảy ra khi xóa');
+      setDeleteModal(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  // Đóng modal xóa
+  const closeDeleteModal = () => {
+    setDeleteModal({ isOpen: false, type: '', item: null, loading: false });
   };
 
   const formatFileSize = (bytes) => {
@@ -250,32 +446,6 @@ const Dashboard = () => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const statusLabels = {
-    pending: 'Chờ xử lý',
-    reviewed: 'Đã xem xét',
-    resolved: 'Đã giải quyết',
-    dismissed: 'Đã bỏ qua'
-  };
-
-  const reasonLabels = {
-    spam: 'Spam',
-    inappropriate: 'Nội dung không phù hợp',
-    harassment: 'Quấy rối',
-    fake_info: 'Thông tin sai lệch',
-    copyright: 'Vi phạm bản quyền',
-    other: 'Khác'
-  };
-
-  const getStatusBadgeClass = (status) => {
-    switch (status) {
-      case 'pending': return 'bg-warning';
-      case 'reviewed': return 'bg-info';
-      case 'resolved': return 'bg-success';
-      case 'dismissed': return 'bg-secondary';
-      default: return 'bg-secondary';
-    }
   };
 
   if (loading) {
@@ -353,6 +523,15 @@ const Dashboard = () => {
         </li>
         <li className="nav-item">
           <button
+            className={`nav-link ${activeTab === 'comments' ? 'active' : ''}`}
+            onClick={() => setActiveTab('comments')}
+          >
+            <i className="fas fa-comments me-2"></i>
+            Bình luận
+          </button>
+        </li>
+        <li className="nav-item">
+          <button
             className={`nav-link ${activeTab === 'reports' ? 'active' : ''}`}
             onClick={() => setActiveTab('reports')}
           >
@@ -364,6 +543,7 @@ const Dashboard = () => {
           </button>
         </li>
       </ul>
+
       {/* Overview Tab */}
       {activeTab === 'overview' && (
         <div className="row">
@@ -440,8 +620,22 @@ const Dashboard = () => {
       {/* Users Tab */}
       {activeTab === 'users' && (
         <div className="card">
-          <div className="card-header">
+          <div className="card-header d-flex justify-content-between align-items-center">
             <h5 className="mb-0">Quản lý người dùng</h5>
+            <div className="d-flex gap-2">
+              <div className="input-group" style={{ width: '300px' }}>
+                <span className="input-group-text">
+                  <i className="fas fa-search"></i>
+                </span>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Tìm kiếm người dùng..."
+                  value={searchTerms.users}
+                  onChange={(e) => handleSearchChange('users', e.target.value)}
+                />
+              </div>
+            </div>
           </div>
           <div className="card-body">
             <div className="table-responsive">
@@ -458,7 +652,7 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map(user => (
+                  {getFilteredData(users, 'users').map(user => (
                     <tr key={user.id}>
                       <td>
                         <div className="d-flex align-items-center">
@@ -512,8 +706,22 @@ const Dashboard = () => {
       {/* Posts Tab */}
       {activeTab === 'posts' && (
         <div className="card">
-          <div className="card-header">
+          <div className="card-header d-flex justify-content-between align-items-center">
             <h5 className="mb-0">Quản lý bài viết</h5>
+            <div className="d-flex gap-2">
+              <div className="input-group" style={{ width: '300px' }}>
+                <span className="input-group-text">
+                  <i className="fas fa-search"></i>
+                </span>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Tìm kiếm bài viết..."
+                  value={searchTerms.posts}
+                  onChange={(e) => handleSearchChange('posts', e.target.value)}
+                />
+              </div>
+            </div>
           </div>
           <div className="card-body">
             <div className="table-responsive">
@@ -530,7 +738,7 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {posts.map(post => (
+                  {getFilteredData(posts, 'posts').map(post => (
                     <tr key={post.id}>
                       <td>
                         <div className="fw-bold">
@@ -567,7 +775,7 @@ const Dashboard = () => {
                           </a>
                           <button
                             className="btn btn-sm btn-danger"
-                            onClick={() => deletePost(post.id)}
+                            onClick={() => openDeletePostModal(post)}
                             title="Xóa bài viết"
                           >
                             <i className="fas fa-trash"></i>
@@ -594,8 +802,22 @@ const Dashboard = () => {
       {/* Documents Tab */}
       {activeTab === 'documents' && (
         <div className="card">
-          <div className="card-header">
+          <div className="card-header d-flex justify-content-between align-items-center">
             <h5 className="mb-0">Quản lý tài liệu</h5>
+            <div className="d-flex gap-2">
+              <div className="input-group" style={{ width: '300px' }}>
+                <span className="input-group-text">
+                  <i className="fas fa-search"></i>
+                </span>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Tìm kiếm tài liệu..."
+                  value={searchTerms.documents}
+                  onChange={(e) => handleSearchChange('documents', e.target.value)}
+                />
+              </div>
+            </div>
           </div>
           <div className="card-body">
             <div className="table-responsive">
@@ -612,7 +834,7 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {documents.map(document => (
+                  {getFilteredData(documents, 'documents').map(document => (
                     <tr key={document.id}>
                       <td>
                         <div className="d-flex align-items-center">
@@ -648,7 +870,7 @@ const Dashboard = () => {
                           </a>
                           <button
                             className="btn btn-sm btn-danger"
-                            onClick={() => deleteDocument(document.id)}
+                            onClick={() => openDeleteDocumentModal(document)}
                             title="Xóa tài liệu"
                           >
                             <i className="fas fa-trash"></i>
@@ -679,10 +901,10 @@ const Dashboard = () => {
             <h5 className="mb-0">Quản lý danh mục</h5>
             <button
               className="btn btn-primary"
-              onClick={openCreateCategoryModal}
+              onClick={() => openCategoryModal()}
             >
               <i className="fas fa-plus me-2"></i>
-              Tạo danh mục mới
+              Thêm danh mục
             </button>
           </div>
           <div className="card-body">
@@ -693,8 +915,7 @@ const Dashboard = () => {
                     <th>Tên danh mục</th>
                     <th>Mô tả</th>
                     <th>Màu sắc</th>
-                    <th>Bài viết</th>
-                    <th>Tài liệu</th>
+                    <th>Số bài viết</th>
                     <th>Ngày tạo</th>
                     <th>Thao tác</th>
                   </tr>
@@ -703,46 +924,42 @@ const Dashboard = () => {
                   {categories.map(category => (
                     <tr key={category.id}>
                       <td>
-                        <div className="d-flex align-items-center">
-                          <div
-                            className="category-color-preview me-2"
-                            style={{
-                              backgroundColor: category.color || '#007bff',
-                              width: '20px',
-                              height: '20px',
-                              borderRadius: '4px'
-                            }}
-                          ></div>
-                          <div className="fw-bold">{category.name}</div>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="text-truncate" style={{ maxWidth: '200px' }}>
-                          {category.description || 'Không có mô tả'}
-                        </div>
-                      </td>
-                      <td>
                         <span
-                          className="category-badge text-white px-2 py-1 rounded"
+                          className="category-badge text-white"
                           style={{ backgroundColor: category.color || '#007bff' }}
                         >
-                          {category.color || '#007bff'}
+                          {category.name}
                         </span>
                       </td>
+                      <td>{category.description}</td>
+                      <td>
+                        <div className="d-flex align-items-center">
+                          <div
+                            className="color-preview me-2"
+                            style={{
+                              width: '20px',
+                              height: '20px',
+                              backgroundColor: category.color,
+                              borderRadius: '4px',
+                              border: '1px solid #ddd'
+                            }}
+                          ></div>
+                          {category.color}
+                        </div>
+                      </td>
                       <td>{category.post_count || 0}</td>
-                      <td>{category.document_count || 0}</td>
                       <td>{new Date(category.created_at).toLocaleDateString('vi-VN')}</td>
                       <td>
                         <div className="d-flex gap-1">
                           <button
                             className="btn btn-sm btn-outline-primary"
-                            onClick={() => handleEditCategory(category)}
+                            onClick={() => openCategoryModal(category)}
                             title="Chỉnh sửa danh mục"
                           >
                             <i className="fas fa-edit"></i>
                           </button>
                           <button
-                            className="btn btn-sm btn-danger"
+                            className="btn btn-sm btn-outline-danger"
                             onClick={() => handleDeleteCategory(category.id, category.name)}
                             title="Xóa danh mục"
                           >
@@ -755,20 +972,106 @@ const Dashboard = () => {
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
 
-            {categories.length === 0 && (
-              <div className="text-center py-4">
-                <i className="fas fa-tags fa-3x text-muted mb-3"></i>
-                <h6>Chưa có danh mục nào</h6>
-                <button
-                  className="btn btn-primary mt-2"
-                  onClick={openCreateCategoryModal}
-                >
-                  <i className="fas fa-plus me-2"></i>
-                  Tạo danh mục đầu tiên
-                </button>
+      {/* Comments Tab */}
+      {activeTab === 'comments' && (
+        <div className="card">
+          <div className="card-header d-flex justify-content-between align-items-center">
+            <h5 className="mb-0">Quản lý bình luận</h5>
+            <div className="d-flex gap-2">
+              <div className="input-group" style={{ width: '300px' }}>
+                <span className="input-group-text">
+                  <i className="fas fa-search"></i>
+                </span>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Tìm kiếm bình luận..."
+                  value={searchTerms.comments}
+                  onChange={(e) => handleSearchChange('comments', e.target.value)}
+                />
               </div>
-            )}
+            </div>
+          </div>
+          <div className="card-body">
+            <div className="table-responsive">
+              <table className="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Nội dung</th>
+                    <th>Tác giả</th>
+                    <th>Bài viết</th>
+                    <th>Ngày tạo</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {getFilteredData(comments, 'comments').map(comment => (
+                    <tr key={comment.id}>
+                      <td>
+                        <div className="comment-content">
+                          {comment.content.length > 100 
+                            ? comment.content.substring(0, 100) + '...'
+                            : comment.content
+                          }
+                        </div>
+                      </td>
+                      <td>
+                        <div className="d-flex align-items-center">
+                          <div className="avatar avatar-sm me-3 bg-secondary d-flex align-items-center justify-content-center text-white">
+                            {comment.full_name?.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="fw-bold">{comment.full_name}</div>
+                            <small className="text-muted">@{comment.username}</small>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <a href={`/posts/${comment.post_id}`} target="_blank" rel="noopener noreferrer" className="text-decoration-none">
+                          {comment.post_title?.length > 50 
+                            ? comment.post_title.substring(0, 50) + '...'
+                            : comment.post_title
+                          }
+                        </a>
+                      </td>
+                      <td>{new Date(comment.created_at).toLocaleDateString('vi-VN')}</td>
+                      <td>
+                        <div className="d-flex gap-1">
+                          <a
+                            href={`/posts/${comment.post_id}#comment-${comment.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-sm btn-outline-primary"
+                            title="Xem bình luận"
+                          >
+                            <i className="fas fa-eye"></i>
+                          </a>
+                          <button
+                            className="btn btn-sm btn-danger"
+                            onClick={() => openDeleteCommentModal(comment)}
+                            title="Xóa bình luận"
+                          >
+                            <i className="fas fa-trash"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination for Comments */}
+            <Pagination
+              currentPage={pagination.comments.page}
+              totalPages={pagination.comments.pages}
+              onPageChange={(page) => handlePageChange('comments', page)}
+              totalItems={pagination.comments.total}
+            />
           </div>
         </div>
       )}
@@ -776,29 +1079,44 @@ const Dashboard = () => {
       {/* Reports Tab */}
       {activeTab === 'reports' && (
         <div className="card">
-          <div className="card-header d-flex justify-content-between align-items-center">
-            <h5 className="mb-0">Quản lý báo cáo</h5>
-            <div className="d-flex gap-2">
+          <div className="card-header">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h5 className="mb-0">Quản lý báo cáo</h5>
+            </div>
+            <div className="d-flex gap-2 flex-wrap">
+              <div className="input-group" style={{ width: '300px' }}>
+                <span className="input-group-text">
+                  <i className="fas fa-search"></i>
+                </span>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Tìm kiếm báo cáo..."
+                  value={searchTerms.reports}
+                  onChange={(e) => handleSearchChange('reports', e.target.value)}
+                />
+              </div>
               <select
                 className="form-select form-select-sm"
                 value={reportFilters.status}
-                onChange={(e) => setReportFilters({ ...reportFilters, status: e.target.value })}
+                onChange={(e) => setReportFilters(prev => ({ ...prev, status: e.target.value }))}
               >
                 <option value="">Tất cả trạng thái</option>
                 <option value="pending">Chờ xử lý</option>
-                <option value="reviewed">Đã xem xét</option>
-                <option value="resolved">Đã giải quyết</option>
-                <option value="dismissed">Đã bỏ qua</option>
+                <option value="resolved">Đã xử lý</option>
+                <option value="rejected">Từ chối</option>
               </select>
               <select
                 className="form-select form-select-sm"
                 value={reportFilters.report_type}
-                onChange={(e) => setReportFilters({ ...reportFilters, report_type: e.target.value })}
+                onChange={(e) => setReportFilters(prev => ({ ...prev, report_type: e.target.value }))}
               >
                 <option value="">Tất cả loại</option>
-                <option value="user">Người dùng</option>
-                <option value="post">Bài viết</option>
-                <option value="document">Tài liệu</option>
+                <option value="spam">Spam</option>
+                <option value="inappropriate">Không phù hợp</option>
+                <option value="harassment">Quấy rối</option>
+                <option value="copyright">Vi phạm bản quyền</option>
+                <option value="other">Khác</option>
               </select>
             </div>
           </div>
@@ -807,293 +1125,421 @@ const Dashboard = () => {
               <table className="table table-hover">
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Loại</th>
+                    <th>Loại báo cáo</th>
+                    <th>Nội dung được báo cáo</th>
                     <th>Người báo cáo</th>
-                    <th>Đối tượng</th>
                     <th>Lý do</th>
                     <th>Trạng thái</th>
-                    <th>Ngày tạo</th>
+                    <th>Ngày báo cáo</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {reports.map(report => (
+                  {getFilteredData(reports, 'reports').map(report => (
                     <tr key={report.id}>
-                      <td>#{report.id}</td>
                       <td>
-                        <span className={`badge ${report.report_type === 'user' ? 'bg-info' :
-                          report.report_type === 'post' ? 'bg-warning' : 'bg-success'
-                          }`}>
-                          {report.report_type === 'user' ? 'Người dùng' :
-                            report.report_type === 'post' ? 'Bài viết' : 'Tài liệu'}
+                        <span className={`badge ${
+                          report.report_type === 'spam' ? 'bg-warning' :
+                          report.report_type === 'inappropriate' ? 'bg-danger' :
+                          report.report_type === 'harassment' ? 'bg-dark' :
+                          report.report_type === 'copyright' ? 'bg-info' :
+                          'bg-secondary'
+                        }`}>
+                          {report.report_type === 'spam' ? 'Spam' :
+                           report.report_type === 'inappropriate' ? 'Không phù hợp' :
+                           report.report_type === 'harassment' ? 'Quấy rối' :
+                           report.report_type === 'copyright' ? 'Vi phạm bản quyền' :
+                           'Khác'}
                         </span>
                       </td>
-                      <td>{report.reporter_name}</td>
                       <td>
-                        <div className="text-truncate" style={{ maxWidth: '200px' }}>
-                          {report.report_type === 'user'
-                            ? report.reported_user_name
-                            : report.report_type === 'post'
-                              ? report.post_title
-                              : report.document_title
-                          }
+                        <div>
+                          <strong>{report.reported_type === 'post' ? 'Bài viết' : 'Bình luận'}:</strong>
+                          <div className="text-truncate" style={{ maxWidth: '200px' }}>
+                            {report.reported_content?.substring(0, 100)}...
+                          </div>
                         </div>
                       </td>
-                      <td>{reasonLabels[report.reason]}</td>
                       <td>
-                        <span className={`badge ${getStatusBadgeClass(report.status)}`}>
-                          {statusLabels[report.status]}
+                        <div className="d-flex align-items-center">
+                          <div className="avatar avatar-sm me-3 bg-warning d-flex align-items-center justify-content-center text-white">
+                            {report.reporter_name?.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="fw-bold">{report.reporter_name}</div>
+                            <small className="text-muted">@{report.reporter_username}</small>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="text-truncate" style={{ maxWidth: '150px' }}>
+                          {report.reason}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`badge ${
+                          report.status === 'pending' ? 'bg-warning' :
+                          report.status === 'resolved' ? 'bg-success' :
+                          'bg-secondary'
+                        }`}>
+                          {report.status === 'pending' ? 'Chờ xử lý' :
+                           report.status === 'resolved' ? 'Đã xử lý' :
+                           'Từ chối'}
                         </span>
                       </td>
-                      <td>{formatDate(report.created_at)}</td>
+                      <td>{new Date(report.created_at).toLocaleDateString('vi-VN')}</td>
                       <td>
-                        <button
-                          className="btn btn-sm btn-primary"
-                          onClick={() => setSelectedReport(report)}
-                        >
-                          <i className="fas fa-eye"></i>
-                        </button>
+                        <div className="d-flex gap-1">
+                          {getReportTargetUrl(report) && (
+                            <a
+                              href={getReportTargetUrl(report)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-sm btn-outline-info"
+                              title="Xem nội dung bị báo cáo"
+                            >
+                              <i className="fas fa-external-link-alt"></i>
+                            </a>
+                          )}
+                          <button
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={() => openReportModal(report)}
+                            title="Xử lý báo cáo"
+                          >
+                            <i className="fas fa-cog"></i>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-
-            {reports.length === 0 && (
-              <div className="text-center py-4">
-                <i className="fas fa-flag fa-3x text-muted mb-3"></i>
-                <h6>Không có báo cáo nào</h6>
-              </div>
-            )}
           </div>
         </div>
       )}
 
-      {/* Category Modal */}
+      {/* Report Processing Modal */}
+      {reportModal.isOpen && (
+        <div className="modal fade show" style={{ display: 'block' }} tabIndex="-1">
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="fas fa-flag me-2"></i>
+                  Xử lý báo cáo #{reportModal.report?.id}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={closeReportModal}
+                  disabled={reportModal.loading}
+                ></button>
+              </div>
+              <form onSubmit={handleReportSubmit}>
+                <div className="modal-body">
+                  {/* Thông tin báo cáo */}
+                  <div className="row mb-4">
+                    <div className="col-md-6">
+                      <h6>Thông tin báo cáo</h6>
+                      <table className="table table-sm">
+                        <tbody>
+                          <tr>
+                            <td><strong>Loại:</strong></td>
+                            <td>
+                              <span className="badge bg-secondary">
+                                {reportModal.report?.report_type === 'user' ? 'Người dùng' : 
+                                 reportModal.report?.report_type === 'post' ? 'Bài viết' : 'Tài liệu'}
+                              </span>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td><strong>Người báo cáo:</strong></td>
+                            <td>{reportModal.report?.reporter_name}</td>
+                          </tr>
+                          <tr>
+                            <td><strong>Ngày báo cáo:</strong></td>
+                            <td>{new Date(reportModal.report?.created_at).toLocaleDateString('vi-VN')}</td>
+                          </tr>
+                          <tr>
+                            <td><strong>Lý do:</strong></td>
+                            <td>
+                              <span className={`badge ${
+                                reportModal.report?.reason === 'spam' ? 'bg-warning' :
+                                reportModal.report?.reason === 'inappropriate' ? 'bg-danger' :
+                                reportModal.report?.reason === 'harassment' ? 'bg-dark' :
+                                reportModal.report?.reason === 'copyright' ? 'bg-info' :
+                                'bg-secondary'
+                              }`}>
+                                {reportModal.report?.reason === 'spam' ? 'Spam' :
+                                 reportModal.report?.reason === 'inappropriate' ? 'Không phù hợp' :
+                                 reportModal.report?.reason === 'harassment' ? 'Quấy rối' :
+                                 reportModal.report?.reason === 'fake_info' ? 'Thông tin sai lệch' :
+                                 reportModal.report?.reason === 'copyright' ? 'Vi phạm bản quyền' :
+                                 'Khác'}
+                              </span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="col-md-6">
+                      <h6>Nội dung bị báo cáo</h6>
+                      <div className="border p-3 rounded bg-light">
+                        <div className="text-truncate" style={{ maxWidth: '100%' }}>
+                          <strong>
+                            {reportModal.report?.reported_content_name || 'Đã bị xóa'}
+                          </strong>
+                        </div>
+                        {reportModal.report?.description && (
+                          <div className="mt-2">
+                            <small className="text-muted">Mô tả:</small>
+                            <p className="mb-0">{reportModal.report.description}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Form xử lý */}
+                  <div className="row">
+                    <div className="col-md-6">
+                      <div className="mb-3">
+                        <label className="form-label">
+                          <strong>Trạng thái xử lý</strong>
+                        </label>
+                        <select
+                          className="form-select"
+                          value={reportForm.status}
+                          onChange={(e) => setReportForm(prev => ({ ...prev, status: e.target.value }))}
+                          required
+                        >
+                          <option value="">Chọn trạng thái</option>
+                          <option value="pending">Chờ xử lý</option>
+                          <option value="reviewed">Đã xem xét</option>
+                          <option value="resolved">Đã giải quyết</option>
+                          <option value="dismissed">Đã bỏ qua</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <div className="mb-3">
+                        <div className="form-check">
+                          <input
+                            className="form-check-input"
+                            type="checkbox"
+                            id="isFalseReport"
+                            checked={reportForm.is_false_report}
+                            onChange={(e) => setReportForm(prev => ({ ...prev, is_false_report: e.target.checked }))}
+                          />
+                          <label className="form-check-label" htmlFor="isFalseReport">
+                            <strong className="text-danger">Đánh dấu là báo cáo sai</strong>
+                          </label>
+                          <div className="form-text">
+                            Nếu chọn, người báo cáo sẽ nhận cảnh báo và có thể bị cấm báo cáo
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">
+                      <strong>Ghi chú của quản trị viên</strong>
+                    </label>
+                    <textarea
+                      className="form-control"
+                      rows="3"
+                      value={reportForm.admin_note}
+                      onChange={(e) => setReportForm(prev => ({ ...prev, admin_note: e.target.value }))}
+                      placeholder="Nhập ghi chú về quyết định xử lý (tùy chọn)"
+                      maxLength="500"
+                    />
+                    <div className="form-text">
+                      {reportForm.admin_note.length}/500 ký tự
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={closeReportModal}
+                    disabled={reportModal.loading}
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={reportModal.loading || !reportForm.status}
+                  >
+                    {reportModal.loading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                        Đang xử lý...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-save me-2"></i>
+                        Lưu quyết định
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Category Management Modal */}
       {showCategoryModal && (
-        <CategoryModal
-          category={editingCategory}
-          categoryForm={categoryForm}
-          setCategoryForm={setCategoryForm}
-          onSubmit={handleCategorySubmit}
-          onClose={() => setShowCategoryModal(false)}
-          loading={actionLoading}
-        />
-      )}
-
-      {/* Report Detail Modal */}
-      {selectedReport && (
-        <ReportDetailModal
-          report={selectedReport}
-          onClose={() => setSelectedReport(null)}
-          onStatusChange={handleReportStatusChange}
-          loading={actionLoading}
-          statusLabels={statusLabels}
-          reasonLabels={reasonLabels}
-        />
-      )}
-    </div>
-  );
-};
-
-// Component Modal tạo/chỉnh sửa danh mục
-const CategoryModal = ({ category, categoryForm, setCategoryForm, onSubmit, onClose, loading }) => {
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setCategoryForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>{category ? 'Chỉnh sửa danh mục' : 'Tạo danh mục mới'}</h3>
-          <button className="close-btn" onClick={onClose}>&times;</button>
-        </div>
-
-        <div className="modal-body">
-          <form onSubmit={onSubmit}>
-            <div className="form-group mb-3">
-              <label className="form-label">Tên danh mục <span className="text-danger">*</span></label>
-              <input
-                type="text"
-                name="name"
-                value={categoryForm.name}
-                onChange={handleInputChange}
-                className="form-control"
-                placeholder="Nhập tên danh mục..."
-                required
-                maxLength="100"
-              />
-            </div>
-
-            <div className="form-group mb-3">
-              <label className="form-label">Mô tả</label>
-              <textarea
-                name="description"
-                value={categoryForm.description}
-                onChange={handleInputChange}
-                className="form-control"
-                placeholder="Mô tả về danh mục..."
-                rows="3"
-                maxLength="500"
-              />
-            </div>
-
-            <div className="form-group mb-3">
-              <label className="form-label">Màu sắc</label>
-              <div className="d-flex align-items-center gap-3">
-                <input
-                  type="color"
-                  name="color"
-                  value={categoryForm.color}
-                  onChange={handleInputChange}
-                  className="form-control form-control-color"
-                  style={{ width: '60px', height: '40px' }}
-                />
-                <input
-                  type="text"
-                  name="color"
-                  value={categoryForm.color}
-                  onChange={handleInputChange}
-                  className="form-control"
-                  placeholder="#007bff"
-                  pattern="^#[0-9A-Fa-f]{6}$"
-                />
-                <div
-                  className="color-preview"
-                  style={{
-                    backgroundColor: categoryForm.color,
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '4px',
-                    border: '1px solid #ddd'
-                  }}
-                ></div>
+        <div className="modal fade show" style={{ display: 'block' }} tabIndex="-1">
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="fas fa-tags me-2"></i>
+                  {editingCategory ? 'Chỉnh sửa danh mục' : 'Thêm danh mục mới'}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={closeCategoryModal}
+                  disabled={actionLoading}
+                ></button>
               </div>
-              <small className="text-muted">Chọn màu sắc đại diện cho danh mục</small>
-            </div>
+              <form onSubmit={handleCategorySubmit}>
+                <div className="modal-body">
+                  <div className="mb-3">
+                    <label className="form-label">
+                      <strong>Tên danh mục</strong>
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={categoryForm.name}
+                      onChange={(e) => setCategoryForm(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Nhập tên danh mục"
+                      required
+                      maxLength="100"
+                    />
+                    <div className="form-text">
+                      {categoryForm.name.length}/100 ký tự
+                    </div>
+                  </div>
 
-            <div className="form-actions d-flex justify-content-end gap-2">
-              <button type="button" onClick={onClose} className="btn btn-secondary">
-                Hủy
-              </button>
-              <button type="submit" disabled={loading} className="btn btn-primary">
-                {loading ? (
-                  <>
-                    <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                    {category ? 'Đang cập nhật...' : 'Đang tạo...'}
-                  </>
-                ) : (
-                  category ? 'Cập nhật' : 'Tạo danh mục'
-                )}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-};
+                  <div className="mb-3">
+                    <label className="form-label">
+                      <strong>Mô tả</strong>
+                    </label>
+                    <textarea
+                      className="form-control"
+                      rows="3"
+                      value={categoryForm.description}
+                      onChange={(e) => setCategoryForm(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Nhập mô tả danh mục (tùy chọn)"
+                      maxLength="500"
+                    />
+                    <div className="form-text">
+                      {categoryForm.description.length}/500 ký tự
+                    </div>
+                  </div>
 
-// Component Modal chi tiết báo cáo
-const ReportDetailModal = ({ report, onClose, onStatusChange, loading, statusLabels, reasonLabels }) => {
-  const [adminNote, setAdminNote] = useState(report.admin_note || '');
-  const [selectedStatus, setSelectedStatus] = useState(report.status);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onStatusChange(report.id, selectedStatus, adminNote);
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>Chi tiết báo cáo #{report.id}</h3>
-          <button className="close-btn" onClick={onClose}>&times;</button>
-        </div>
-
-        <div className="modal-body">
-          <div className="report-info">
-            <div className="info-row">
-              <strong>Loại báo cáo:</strong>
-              {report.report_type === 'user' ? 'Người dùng' :
-                report.report_type === 'post' ? 'Bài viết' : 'Tài liệu'}
+                  <div className="mb-3">
+                    <label className="form-label">
+                      <strong>Màu sắc</strong>
+                    </label>
+                    <div className="d-flex align-items-center gap-3">
+                      <input
+                        type="color"
+                        className="form-control form-control-color"
+                        value={categoryForm.color}
+                        onChange={(e) => setCategoryForm(prev => ({ ...prev, color: e.target.value }))}
+                        style={{ width: '60px', height: '40px' }}
+                      />
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={categoryForm.color}
+                        onChange={(e) => setCategoryForm(prev => ({ ...prev, color: e.target.value }))}
+                        placeholder="#007bff"
+                        pattern="^#[0-9A-Fa-f]{6}$"
+                      />
+                      <div
+                        className="category-preview"
+                        style={{
+                          backgroundColor: categoryForm.color,
+                          color: 'white',
+                          padding: '8px 12px',
+                          borderRadius: '4px',
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          minWidth: '100px',
+                          textAlign: 'center'
+                        }}
+                      >
+                        {categoryForm.name || 'Preview'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={closeCategoryModal}
+                    disabled={actionLoading}
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={actionLoading || !categoryForm.name.trim()}
+                  >
+                    {actionLoading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                        Đang lưu...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-save me-2"></i>
+                        {editingCategory ? 'Cập nhật' : 'Tạo mới'}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
-            <div className="info-row">
-              <strong>Người báo cáo:</strong> {report.reporter_name}
-            </div>
-            <div className="info-row">
-              <strong>Đối tượng:</strong>
-              {report.report_type === 'user'
-                ? report.reported_user_name
-                : report.report_type === 'post'
-                  ? report.post_title
-                  : report.document_title
-              }
-            </div>
-            <div className="info-row">
-              <strong>Lý do:</strong> {reasonLabels[report.reason]}
-            </div>
-            <div className="info-row">
-              <strong>Mô tả:</strong>
-              <div className="description">
-                {report.description || 'Không có mô tả'}
-              </div>
-            </div>
-            <div className="info-row">
-              <strong>Ngày tạo:</strong> {new Date(report.created_at).toLocaleString('vi-VN')}
-            </div>
-            {report.reviewed_at && (
-              <div className="info-row">
-                <strong>Đã xem xét:</strong> {new Date(report.reviewed_at).toLocaleString('vi-VN')}
-                {report.reviewer_username && ` bởi ${report.reviewer_username}`}
-              </div>
-            )}
           </div>
-
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label>Trạng thái:</label>
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="form-control"
-              >
-                <option value="pending">Chờ xử lý</option>
-                <option value="reviewed">Đã xem xét</option>
-                <option value="resolved">Đã giải quyết</option>
-                <option value="dismissed">Đã bỏ qua</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Ghi chú của admin:</label>
-              <textarea
-                value={adminNote}
-                onChange={(e) => setAdminNote(e.target.value)}
-                placeholder="Ghi chú về việc xử lý báo cáo..."
-                rows="4"
-                maxLength="500"
-                className="form-control"
-              />
-            </div>
-
-            <div className="form-actions">
-              <button type="button" onClick={onClose} className="btn btn-secondary">Hủy</button>
-              <button type="submit" disabled={loading} className="btn btn-primary">
-                {loading ? 'Đang cập nhật...' : 'Cập nhật'}
-              </button>
-            </div>
-          </form>
         </div>
-      </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={closeDeleteModal}
+        onConfirm={handleDeleteWithReason}
+        title={
+          deleteModal.type === 'post' ? 'Xóa bài viết' :
+          deleteModal.type === 'document' ? 'Xóa tài liệu' :
+          'Xóa bình luận'
+        }
+        itemName={
+          deleteModal.type === 'comment' 
+            ? (deleteModal.item?.content?.substring(0, 50) + '...' || '')
+            : (deleteModal.item?.title || '')
+        }
+        itemType={
+          deleteModal.type === 'post' ? 'bài viết' :
+          deleteModal.type === 'document' ? 'tài liệu' :
+          'bình luận'
+        }
+        loading={deleteModal.loading}
+      />
     </div>
   );
 };

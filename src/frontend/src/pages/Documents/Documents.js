@@ -12,6 +12,7 @@ const Documents = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 12,
@@ -23,7 +24,7 @@ const Documents = () => {
 
   useEffect(() => {
     fetchData();
-  }, [selectedCategory, searchTerm, pagination.page]);
+  }, [selectedCategory, searchTerm, sortBy, pagination.page]);
 
   const fetchData = async () => {
     try {
@@ -32,6 +33,7 @@ const Documents = () => {
           params: {
             category: selectedCategory,
             search: searchTerm,
+            sortBy: sortBy,
             page: pagination.page,
             limit: pagination.limit
           }
@@ -64,6 +66,8 @@ const Documents = () => {
       setSelectedCategory(value);
     } else if (filterType === 'search') {
       setSearchTerm(value);
+    } else if (filterType === 'sort') {
+      setSortBy(value);
     }
   };
 
@@ -238,6 +242,21 @@ const Documents = () => {
                     {category.name}
                   </option>
                 ))}
+              </select>
+            </div>
+
+            {/* Sort By */}
+            <div className="mb-3">
+              <label className="form-label">Sắp xếp theo</label>
+              <select
+                className="form-select"
+                value={sortBy}
+                onChange={(e) => handleFilterChange('sort', e.target.value)}
+              >
+                <option value="newest">Mới nhất</option>
+                <option value="oldest">Cũ nhất</option>
+                <option value="most_downloaded">Tải nhiều nhất</option>
+                <option value="least_downloaded">Tải ít nhất</option>
               </select>
             </div>
           </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import ReportButton from '../../components/Reports/ReportButton';
+import ReportStatus from '../../components/Reports/ReportStatus';
 import Pagination from '../../components/Pagination/Pagination';
 import axios from 'axios';
 
@@ -11,6 +12,8 @@ const Profile = () => {
   const [user, setUser] = useState(null);
   const [posts, setPosts] = useState([]);
   const [documents, setDocuments] = useState([]);
+  const [commentedPosts, setCommentedPosts] = useState([]);
+  const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('posts');
   const [isEditing, setIsEditing] = useState(false);
@@ -22,7 +25,9 @@ const Profile = () => {
   const [editLoading, setEditLoading] = useState(false);
   const [pagination, setPagination] = useState({
     posts: { page: 1, limit: 10, total: 0, pages: 0 },
-    documents: { page: 1, limit: 12, total: 0, pages: 0 }
+    documents: { page: 1, limit: 12, total: 0, pages: 0 },
+    commentedPosts: { page: 1, limit: 10, total: 0, pages: 0 },
+    reports: { page: 1, limit: 10, total: 0, pages: 0 }
   });
 
   useEffect(() => {
@@ -34,8 +39,12 @@ const Profile = () => {
       fetchPosts();
     } else if (activeTab === 'documents') {
       fetchDocuments();
+    } else if (activeTab === 'commentedPosts') {
+      fetchCommentedPosts();
+    } else if (activeTab === 'reports') {
+      fetchReports();
     }
-  }, [activeTab, pagination.posts.page, pagination.documents.page]);
+  }, [activeTab, pagination.posts.page, pagination.documents.page, pagination.commentedPosts.page, pagination.reports.page]);
 
   const fetchUserData = async () => {
     try {
@@ -105,6 +114,56 @@ const Profile = () => {
       }));
     } catch (error) {
       console.error('Error fetching documents:', error);
+    }
+  };
+
+  const fetchCommentedPosts = async () => {
+    try {
+      const response = await axios.get(`/api/users/${id}/commented-posts`, {
+        params: {
+          page: pagination.commentedPosts.page,
+          limit: pagination.commentedPosts.limit
+        }
+      });
+      
+      setCommentedPosts(response.data.posts);
+      setPagination(prev => ({
+        ...prev,
+        commentedPosts: {
+          ...prev.commentedPosts,
+          total: response.data.pagination.total,
+          pages: response.data.pagination.pages
+        }
+      }));
+    } catch (error) {
+      console.error('Error fetching commented posts:', error);
+    }
+  };
+
+  const fetchReports = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/reports/my-reports', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        params: {
+          page: pagination.reports.page,
+          limit: pagination.reports.limit
+        }
+      });
+      
+      setReports(response.data.reports);
+      setPagination(prev => ({
+        ...prev,
+        reports: {
+          ...prev.reports,
+          total: response.data.pagination.total,
+          pages: response.data.pagination.pages
+        }
+      }));
+    } catch (error) {
+      console.error('Error fetching reports:', error);
     }
   };
 
@@ -485,6 +544,27 @@ const Profile = () => {
                 Tài liệu ({pagination.documents.total})
               </button>
             </li>
+            <li className="nav-item">
+              <button 
+                className={`nav-link ${activeTab === 'commentedPosts' ? 'active' : ''}`}
+                onClick={() => handleTabChange('commentedPosts')}
+              >
+                <i className="fas fa-comment me-2"></i>
+                Đã bình luận ({pagination.commentedPosts.total})
+              </button>
+            </li>
+            {/* Chỉ hiển thị tab báo cáo cho chính chủ tài khoản */}
+            {currentUser && currentUser.id === parseInt(id) && (
+              <li className="nav-item">
+                <button 
+                  className={`nav-link ${activeTab === 'reports' ? 'active' : ''}`}
+                  onClick={() => handleTabChange('reports')}
+                >
+                  <i className="fas fa-flag me-2"></i>
+                  Báo cáo của tôi ({pagination.reports.total})
+                </button>
+              </li>
+            )}
           </ul>
 
           {/* Posts Tab */}
@@ -656,6 +736,204 @@ const Profile = () => {
                   />
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Commented Posts Tab */}
+          {activeTab === 'commentedPosts' && (
+            <div className="row">
+              {commentedPosts.length > 0 ? (
+                commentedPosts.map(post => (
+                  <div key={post.id} className="col-12 mb-3">
+                    <div className="post-card">
+                      <div className="d-flex justify-content-between align-items-start mb-2">
+                        <h5 className="mb-0">
+                          <a href={`/posts/${post.id}`} className="text-decoration-none text-dark">
+                            {post.title}
+                          </a>
+                        </h5>
+                        <span 
+                          className="category-badge text-white"
+                          style={{ backgroundColor: post.category_color || '#007bff' }}
+                        >
+                          {post.category_name}
+                        </span>
+                      </div>
+                      <p className="text-muted mb-2">
+                        {post.content.substring(0, 200)}...
+                      </p>
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div className="text-muted small">
+                          <span className="me-3">
+                            <i className="fas fa-user me-1"></i>
+                            {post.author_name}
+                          </span>
+                          <span className="me-3">
+                            <i className="fas fa-eye me-1"></i>
+                            {post.views} lượt xem
+                          </span>
+                          <span className="me-3">
+                            <i className="fas fa-comments me-1"></i>
+                            {post.comment_count} bình luận
+                          </span>
+                          <span>
+                            <i className="fas fa-calendar me-1"></i>
+                            {formatDate(post.created_at)}
+                          </span>
+                        </div>
+                        <div className="d-flex gap-2">
+                          <a href={`/posts/${post.id}`} className="btn btn-outline-primary btn-sm">
+                            Xem bài viết
+                          </a>
+                        </div>
+                      </div>
+                      {/* Hiển thị bình luận gần đây nhất của user */}
+                      {post.latest_comment && (
+                        <div className="mt-3 p-3 bg-light rounded">
+                          <small className="text-muted">Bình luận gần đây của bạn:</small>
+                          <p className="mb-0 mt-1">
+                            {post.latest_comment.length > 150 
+                              ? post.latest_comment.substring(0, 150) + '...'
+                              : post.latest_comment
+                            }
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="col-12">
+                  <div className="text-center py-5">
+                    <i className="fas fa-comment fa-3x text-muted mb-3"></i>
+                    <h5>Chưa bình luận bài viết nào</h5>
+                    <p className="text-muted">Người dùng này chưa bình luận bài viết nào</p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Pagination for Commented Posts */}
+              {commentedPosts.length > 0 && (
+                <div className="col-12">
+                  <Pagination
+                    currentPage={pagination.commentedPosts.page}
+                    totalPages={pagination.commentedPosts.pages}
+                    onPageChange={(page) => handlePageChange('commentedPosts', page)}
+                    totalItems={pagination.commentedPosts.total}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Reports Tab - Only for own profile */}
+          {activeTab === 'reports' && currentUser && currentUser.id === parseInt(id) && (
+            <div className="row">
+              <div className="col-12">
+                {/* Report Status Component */}
+                <ReportStatus />
+                
+                {/* Reports List */}
+                <div className="card mt-4">
+                  <div className="card-header">
+                    <h6 className="mb-0">
+                      <i className="fas fa-list me-2"></i>
+                      Lịch sử báo cáo
+                    </h6>
+                  </div>
+                  <div className="card-body">
+                    {reports.length > 0 ? (
+                      <div className="table-responsive">
+                        <table className="table table-hover">
+                          <thead>
+                            <tr>
+                              <th>ID</th>
+                              <th>Loại</th>
+                              <th>Đối tượng</th>
+                              <th>Lý do</th>
+                              <th>Trạng thái</th>
+                              <th>Ngày gửi</th>
+                              <th>Ghi chú admin</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {reports.map(report => (
+                              <tr key={report.id} className={report.is_false_report ? 'table-danger' : ''}>
+                                <td>#{report.id}</td>
+                                <td>
+                                  <span className="badge bg-secondary">
+                                    {report.report_type === 'user' ? 'Người dùng' : 
+                                     report.report_type === 'post' ? 'Bài viết' : 'Tài liệu'}
+                                  </span>
+                                </td>
+                                <td>
+                                  <div className="text-truncate" style={{ maxWidth: '200px' }}>
+                                    {report.reported_content_name || 'Đã bị xóa'}
+                                  </div>
+                                </td>
+                                <td>
+                                  {(() => {
+                                    const reasons = {
+                                      spam: 'Spam',
+                                      inappropriate: 'Nội dung không phù hợp',
+                                      harassment: 'Quấy rối',
+                                      fake_info: 'Thông tin sai lệch',
+                                      copyright: 'Vi phạm bản quyền',
+                                      other: 'Khác'
+                                    };
+                                    return reasons[report.reason] || report.reason;
+                                  })()}
+                                </td>
+                                <td>
+                                  <span className={`badge ${
+                                    report.is_false_report ? 'bg-danger' :
+                                    report.status === 'pending' ? 'bg-warning text-dark' :
+                                    report.status === 'reviewed' ? 'bg-info' :
+                                    report.status === 'resolved' ? 'bg-success' : 'bg-secondary'
+                                  }`}>
+                                    {report.is_false_report ? 'Báo cáo sai' :
+                                     report.status === 'pending' ? 'Chờ xử lý' :
+                                     report.status === 'reviewed' ? 'Đã xem xét' :
+                                     report.status === 'resolved' ? 'Đã giải quyết' : 'Đã bỏ qua'}
+                                  </span>
+                                </td>
+                                <td>
+                                  <small>{formatDate(report.created_at)}</small>
+                                </td>
+                                <td>
+                                  {report.admin_note ? (
+                                    <div className="text-truncate" style={{ maxWidth: '200px' }} title={report.admin_note}>
+                                      {report.admin_note}
+                                    </div>
+                                  ) : (
+                                    <span className="text-muted">-</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="text-center py-5">
+                        <i className="fas fa-flag fa-3x text-muted mb-3"></i>
+                        <h5>Chưa có báo cáo nào</h5>
+                        <p className="text-muted">Bạn chưa gửi báo cáo nào.</p>
+                      </div>
+                    )}
+                    
+                    {/* Pagination for Reports */}
+                    {reports.length > 0 && (
+                      <Pagination
+                        currentPage={pagination.reports.page}
+                        totalPages={pagination.reports.pages}
+                        onPageChange={(page) => handlePageChange('reports', page)}
+                        totalItems={pagination.reports.total}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

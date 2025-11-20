@@ -11,6 +11,7 @@ const commentRoutes = require('./routes/comments');
 const documentRoutes = require('./routes/documents');
 const adminRoutes = require('./routes/admin');
 const reportRoutes = require('./routes/reports');
+const { router: notificationRoutes } = require('./routes/notifications');
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use('/api/comments', commentRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './ReportModal.css';
 
 const ReportModal = ({ isOpen, onClose, reportType, targetId, targetTitle }) => {
@@ -8,6 +8,8 @@ const ReportModal = ({ isOpen, onClose, reportType, targetId, targetTitle }) => 
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [reportStatus, setReportStatus] = useState(null);
+    const [statusLoading, setStatusLoading] = useState(true);
 
     const reasons = {
         spam: 'Spam',
@@ -16,6 +18,34 @@ const ReportModal = ({ isOpen, onClose, reportType, targetId, targetTitle }) => 
         fake_info: 'Thông tin sai lệch',
         copyright: 'Vi phạm bản quyền',
         other: 'Khác'
+    };
+
+    // Lấy trạng thái báo cáo khi modal mở
+    useEffect(() => {
+        if (isOpen) {
+            fetchReportStatus();
+        }
+    }, [isOpen]);
+
+    const fetchReportStatus = async () => {
+        setStatusLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/reports/my-status', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                setReportStatus(data);
+            }
+        } catch (error) {
+            console.error('Error fetching report status:', error);
+        } finally {
+            setStatusLoading(false);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -95,7 +125,64 @@ const ReportModal = ({ isOpen, onClose, reportType, targetId, targetTitle }) => 
                         <strong>Đối tượng báo cáo:</strong> {targetTitle}
                     </div>
 
-                    <form onSubmit={handleSubmit}>
+                    {/* Hiển thị trạng thái báo cáo */}
+                    {statusLoading ? (
+                        <div className="text-center py-3">
+                            <div className="spinner-border spinner-border-sm" role="status">
+                                <span className="visually-hidden">Đang tải...</span>
+                            </div>
+                        </div>
+                    ) : reportStatus && (
+                        <div className="report-status-info mb-3">
+                            {/* Hiển thị cảnh báo nếu bị cấm */}
+                            {reportStatus.is_banned && (
+                                <div className="alert alert-danger">
+                                    <i className="fas fa-ban me-2"></i>
+                                    <strong>Bạn đã bị cấm báo cáo!</strong>
+                                    <p className="mb-0">
+                                        {reportStatus.ban_until ? (
+                                            <>Bạn bị cấm báo cáo đến {new Date(reportStatus.ban_until).toLocaleString('vi-VN')} do báo cáo sai {reportStatus.warning_count} lần.</>
+                                        ) : (
+                                            <>Bạn đã bị cấm báo cáo vĩnh viễn do báo cáo sai {reportStatus.warning_count} lần.</>
+                                        )}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Hiển thị cảnh báo nếu đạt giới hạn báo cáo */}
+                            {!reportStatus.is_banned && reportStatus.pending_reports_count >= 3 && (
+                                <div className="alert alert-warning">
+                                    <i className="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>Đã đạt giới hạn báo cáo!</strong>
+                                    <p className="mb-0">
+                                        Bạn đã có {reportStatus.pending_reports_count}/3 báo cáo đang chờ xử lý. 
+                                        Vui lòng đợi quản trị viên xử lý xong trước khi gửi báo cáo mới.
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Hiển thị cảnh báo nếu có lịch sử báo cáo sai */}
+                            {!reportStatus.is_banned && reportStatus.warning_count > 0 && reportStatus.warning_count < 3 && (
+                                <div className="alert alert-info">
+                                    <i className="fas fa-info-circle me-2"></i>
+                                    <strong>Lưu ý:</strong> Bạn đã nhận {reportStatus.warning_count} cảnh báo do báo cáo sai. 
+                                    Hãy cẩn thận khi gửi báo cáo để tránh bị cấm.
+                                </div>
+                            )}
+
+                            {/* Hiển thị số báo cáo đang chờ */}
+                            {!reportStatus.is_banned && reportStatus.pending_reports_count > 0 && reportStatus.pending_reports_count < 3 && (
+                                <div className="alert alert-light">
+                                    <i className="fas fa-clock me-2"></i>
+                                    Bạn có {reportStatus.pending_reports_count}/3 báo cáo đang chờ xử lý.
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Form báo cáo - chỉ hiển thị nếu có thể báo cáo */}
+                    {reportStatus && reportStatus.can_report ? (
+                        <form onSubmit={handleSubmit}>
                         <div className="form-group">
                             <label>Lý do báo cáo *</label>
                             <select
@@ -135,6 +222,18 @@ const ReportModal = ({ isOpen, onClose, reportType, targetId, targetTitle }) => 
                             </button>
                         </div>
                     </form>
+                    ) : reportStatus && !reportStatus.can_report ? (
+                        <div className="text-center py-4">
+                            <i className="fas fa-ban fa-3x text-muted mb-3"></i>
+                            <h5>Không thể gửi báo cáo</h5>
+                            <p className="text-muted">
+                                {reportStatus.is_banned ? 
+                                    'Bạn đã bị cấm báo cáo.' : 
+                                    'Bạn đã đạt giới hạn báo cáo cho phép.'
+                                }
+                            </p>
+                        </div>
+                    ) : null}
                 </div>
             </div>
         </div>

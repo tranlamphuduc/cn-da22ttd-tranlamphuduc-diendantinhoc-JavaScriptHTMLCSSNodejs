@@ -101,6 +101,12 @@ const Login = () => {
               </form>
 
               <div className="text-center mt-3">
+                <p className="mb-2">
+                  <Link to="/forgot-password" className="text-decoration-none">
+                    <i className="fas fa-key me-1"></i>
+                    Quên mật khẩu?
+                  </Link>
+                </p>
                 <p className="mb-0">
                   Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
                 </p>

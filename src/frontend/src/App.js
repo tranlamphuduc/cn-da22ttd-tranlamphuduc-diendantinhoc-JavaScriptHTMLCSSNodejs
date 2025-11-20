@@ -5,12 +5,15 @@ import Navbar from './components/Layout/Navbar';
 import Home from './pages/Home';
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
+import ForgotPassword from './pages/Auth/ForgotPassword';
 import Dashboard from './pages/Admin/Dashboard';
 import CreatePost from './pages/Posts/CreatePost';
 import PostDetail from './pages/Posts/PostDetail';
 import Profile from './pages/Profile/Profile';
 import Documents from './pages/Documents/Documents';
 import UploadDocument from './pages/Documents/UploadDocument';
+import TestNotifications from './pages/TestNotifications';
+import MyReports from './pages/Reports/MyReports';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import AdminRoute from './components/Auth/AdminRoute';
 
@@ -25,6 +28,7 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/posts/:id" element={<PostDetail />} />
               <Route path="/documents" element={<Documents />} />
               <Route path="/profile/:id" element={<Profile />} />
@@ -38,6 +42,16 @@ function App() {
               <Route path="/upload-document" element={
                 <ProtectedRoute>
                   <UploadDocument />
+                </ProtectedRoute>
+              } />
+              <Route path="/test-notifications" element={
+                <ProtectedRoute>
+                  <TestNotifications />
+                </ProtectedRoute>
+              } />
+              <Route path="/my-reports" element={
+                <ProtectedRoute>
+                  <MyReports />
                 </ProtectedRoute>
               } />
               

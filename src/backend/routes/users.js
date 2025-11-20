@@ -299,4 +299,50 @@ router.get('/:id/documents', async (req, res) => {
   }
 });
 
+// Lấy bài viết mà người dùng đã bình luận
+router.get('/:id/commented-posts', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const [posts] = await db.execute(`
+      SELECT DISTINCT p.*, 
+             c.name as category_name, 
+             c.color as category_color,
+             u.full_name as author_name,
+             (SELECT COUNT(*) FROM comments WHERE post_id = p.id AND is_approved = TRUE) as comment_count,
+             (SELECT content FROM comments WHERE post_id = p.id AND user_id = ? AND is_approved = TRUE ORDER BY created_at DESC LIMIT 1) as latest_comment
+      FROM posts p
+      JOIN categories c ON p.category_id = c.id
+      JOIN users u ON p.user_id = u.id
+      JOIN comments cm ON p.id = cm.post_id
+      WHERE cm.user_id = ? AND cm.is_approved = TRUE AND p.is_approved = TRUE
+      ORDER BY cm.created_at DESC
+      LIMIT ? OFFSET ?
+    `, [id, id, limit, offset]);
+
+    const [totalCount] = await db.execute(`
+      SELECT COUNT(DISTINCT p.id) as count 
+      FROM posts p
+      JOIN comments cm ON p.id = cm.post_id
+      WHERE cm.user_id = ? AND cm.is_approved = TRUE AND p.is_approved = TRUE
+    `, [id]);
+
+    res.json({
+      posts,
+      pagination: {
+        page,
+        limit,
+        total: totalCount[0].count,
+        pages: Math.ceil(totalCount[0].count / limit)
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+});
+
 module.exports = router;

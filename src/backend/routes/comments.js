@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const db = require('../config/database');
 const { auth } = require('../middleware/auth');
+const { createNotification } = require('./notifications');
 
 const router = express.Router();
 
@@ -13,22 +14,50 @@ router.get('/post/:postId', async (req, res) => {
     const limit = parseInt(req.query.limit) || 20;
     const offset = (page - 1) * limit;
 
-    const [comments] = await db.execute(`
+    // Lấy tất cả comments (cả parent và replies)
+    const [allComments] = await db.execute(`
       SELECT c.*, u.username, u.full_name, u.avatar
       FROM comments c
       JOIN users u ON c.user_id = u.id
       WHERE c.post_id = ? AND c.is_approved = TRUE
-      ORDER BY c.created_at ASC
-      LIMIT ? OFFSET ?
-    `, [postId, limit, offset]);
+      ORDER BY 
+        CASE WHEN c.parent_id IS NULL THEN c.id ELSE c.parent_id END ASC,
+        c.parent_id ASC,
+        c.created_at ASC
+    `, [postId]);
+
+    // Tổ chức comments thành cấu trúc cây
+    const commentsMap = new Map();
+    const rootComments = [];
+
+    // Tạo map của tất cả comments
+    allComments.forEach(comment => {
+      comment.replies = [];
+      commentsMap.set(comment.id, comment);
+    });
+
+    // Tổ chức thành cấu trúc parent-child
+    allComments.forEach(comment => {
+      if (comment.parent_id === null) {
+        rootComments.push(comment);
+      } else {
+        const parent = commentsMap.get(comment.parent_id);
+        if (parent) {
+          parent.replies.push(comment);
+        }
+      }
+    });
+
+    // Phân trang chỉ áp dụng cho root comments
+    const paginatedComments = rootComments.slice(offset, offset + limit);
 
     const [totalCount] = await db.execute(
-      'SELECT COUNT(*) as count FROM comments WHERE post_id = ? AND is_approved = TRUE',
+      'SELECT COUNT(*) as count FROM comments WHERE post_id = ? AND is_approved = TRUE AND parent_id IS NULL',
       [postId]
     );
 
     res.json({
-      comments,
+      comments: paginatedComments,
       pagination: {
         page,
         limit,
@@ -77,6 +106,27 @@ router.post('/', auth, [
       'INSERT INTO comments (content, user_id, post_id, parent_id) VALUES (?, ?, ?, ?)',
       [content, user_id, post_id, parent_id || null]
     );
+
+    // Tạo thông báo cho tác giả bài viết (nếu không phải chính họ bình luận)
+    const [postInfo] = await db.execute(
+      'SELECT user_id, title FROM posts WHERE id = ?',
+      [post_id]
+    );
+    
+    if (postInfo.length > 0 && postInfo[0].user_id !== user_id) {
+      const [commenterInfo] = await db.execute(
+        'SELECT full_name FROM users WHERE id = ?',
+        [user_id]
+      );
+      
+      await createNotification(
+        postInfo[0].user_id,
+        'comment',
+        'Có bình luận mới',
+        `${commenterInfo[0].full_name} đã bình luận về bài viết "${postInfo[0].title}" của bạn`,
+        post_id
+      );
+    }
 
     res.status(201).json({
       message: 'Tạo bình luận thành công',

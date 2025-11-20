@@ -12,6 +12,7 @@ router.get('/', async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const category = req.query.category;
     const search = req.query.search;
+    const sortBy = req.query.sortBy || 'newest'; // newest, oldest, most_viewed, least_viewed
     const offset = (page - 1) * limit;
 
     let query = `
@@ -35,7 +36,23 @@ router.get('/', async (req, res) => {
       params.push(`%${search}%`, `%${search}%`);
     }
 
-    query += ' ORDER BY p.created_at DESC LIMIT ? OFFSET ?';
+    // Thêm sắp xếp theo lựa chọn
+    let orderBy = 'p.created_at DESC'; // mặc định
+    switch (sortBy) {
+      case 'oldest':
+        orderBy = 'p.created_at ASC';
+        break;
+      case 'most_viewed':
+        orderBy = 'p.views DESC';
+        break;
+      case 'least_viewed':
+        orderBy = 'p.views ASC';
+        break;
+      default:
+        orderBy = 'p.created_at DESC';
+    }
+
+    query += ` ORDER BY ${orderBy} LIMIT ? OFFSET ?`;
     params.push(limit, offset);
 
     const [posts] = await db.execute(query, params);

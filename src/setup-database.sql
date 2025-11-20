@@ -85,12 +85,40 @@ CREATE TABLE reports (
     admin_note TEXT DEFAULT NULL,
     reviewed_by INT DEFAULT NULL,
     reviewed_at TIMESTAMP NULL,
+    is_false_report BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (reported_user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (reported_post_id) REFERENCES posts(id) ON DELETE CASCADE,
     FOREIGN KEY (reported_document_id) REFERENCES documents(id) ON DELETE CASCADE,
     FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Bảng cảnh báo báo cáo sai
+CREATE TABLE report_warnings (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    warning_count INT DEFAULT 0,
+    is_banned_from_reporting BOOLEAN DEFAULT FALSE,
+    ban_until TIMESTAMP NULL,
+    last_warning_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user_warning (user_id)
+);
+
+-- Bảng thông báo
+CREATE TABLE notifications (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    type ENUM('comment', 'post_deleted', 'comment_deleted', 'document_deleted', 'report_warning') NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    related_id INT DEFAULT NULL, -- ID của bài viết, bình luận hoặc tài liệu liên quan
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Bảng thống kê
@@ -165,6 +193,20 @@ INSERT INTO reports (reporter_id, reported_user_id, reported_post_id, reported_d
 (2, NULL, 3, NULL, 'post', 'fake_info', 'Bài viết chứa thông tin sai lệch về công nghệ', 'dismissed'),
 (3, NULL, NULL, 1, 'document', 'copyright', 'Tài liệu này vi phạm bản quyền', 'pending'),
 (4, NULL, NULL, 2, 'document', 'inappropriate', 'Nội dung tài liệu không phù hợp', 'reviewed');
+
+-- Thêm dữ liệu mẫu cho cảnh báo báo cáo
+INSERT INTO report_warnings (user_id, warning_count, is_banned_from_reporting, ban_until, last_warning_at) VALUES
+(3, 2, FALSE, NULL, DATE_SUB(NOW(), INTERVAL 2 DAY)),
+(4, 3, TRUE, DATE_ADD(NOW(), INTERVAL 5 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY));
+
+-- Thêm thông báo mẫu
+INSERT INTO notifications (user_id, type, title, message, related_id, is_read) VALUES
+(2, 'comment', 'Có bình luận mới', 'Nguyễn Thanh Duy đã bình luận về bài viết "Hướng dẫn học React.js cho người mới bắt đầu" của bạn', 1, FALSE),
+(3, 'comment', 'Có bình luận mới', 'Nguyễn Đinh Tuấn Khoa đã bình luận về bài viết "Cấu trúc dữ liệu Stack và Queue" của bạn', 2, FALSE),
+(2, 'post_deleted', 'Bài viết bị xóa', 'Bài viết "Test Post" của bạn đã bị xóa bởi quản trị viên. Lý do: Nội dung không phù hợp với quy định diễn đàn', NULL, TRUE),
+(4, 'document_deleted', 'Tài liệu bị xóa', 'Tài liệu "Test Document" của bạn đã bị xóa bởi quản trị viên. Lý do: Vi phạm bản quyền', NULL, FALSE),
+(3, 'report_warning', 'Cảnh báo báo cáo sai', 'Bạn đã nhận cảnh báo lần 2 do gửi báo cáo không chính xác. Nếu tiếp tục báo cáo sai, bạn sẽ bị cấm báo cáo.', NULL, FALSE),
+(4, 'report_warning', 'Cảnh báo báo cáo sai', 'Bạn đã bị cấm báo cáo đến ngày 25/11/2024 do báo cáo sai 3 lần.', NULL, FALSE);
 
 -- Cập nhật thống kê
 INSERT INTO statistics (total_users, total_posts, total_comments, total_documents, date) VALUES
