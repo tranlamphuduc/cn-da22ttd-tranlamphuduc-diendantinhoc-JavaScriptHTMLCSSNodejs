@@ -3,14 +3,36 @@ const router = express.Router();
 const db = require('../config/database');
 const { auth } = require('../middleware/auth');
 
+// Hàm xóa thông báo cũ (quá 30 ngày)
+const cleanupOldNotifications = async () => {
+  try {
+    const [result] = await db.execute(
+      'DELETE FROM notifications WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 DAY)'
+    );
+    if (result.affectedRows > 0) {
+      console.log(`Đã xóa ${result.affectedRows} thông báo cũ (quá 30 ngày)`);
+    }
+    return result.affectedRows;
+  } catch (error) {
+    console.error('Error cleaning up old notifications:', error);
+    return 0;
+  }
+};
+
 // Lấy danh sách thông báo của user
 router.get('/', auth, async (req, res) => {
   try {
+    // Tự động xóa thông báo cũ của user này (quá 30 ngày)
+    await db.execute(
+      'DELETE FROM notifications WHERE user_id = ? AND created_at < DATE_SUB(NOW(), INTERVAL 30 DAY)',
+      [req.user.id]
+    );
+
     const [notifications] = await db.execute(
       `SELECT * FROM notifications 
        WHERE user_id = ? 
        ORDER BY created_at DESC 
-       LIMIT 20`,
+       LIMIT 50`,
       [req.user.id]
     );
 
@@ -125,4 +147,79 @@ const createNotification = async (userId, type, title, message, relatedId = null
   }
 };
 
-module.exports = { router, createNotification };
+// Admin: Gửi thông báo cho tất cả người dùng hoặc cá nhân
+router.post('/admin/send', auth, async (req, res) => {
+  try {
+    // Kiểm tra quyền admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Chỉ admin mới có quyền gửi thông báo' });
+    }
+
+    const { title, message, target_type, target_user_id } = req.body;
+
+    if (!title || !message) {
+      return res.status(400).json({ message: 'Tiêu đề và nội dung không được để trống' });
+    }
+
+    if (target_type === 'individual' && !target_user_id) {
+      return res.status(400).json({ message: 'Vui lòng chọn người dùng để gửi thông báo' });
+    }
+
+    if (target_type === 'all') {
+      // Gửi cho tất cả người dùng
+      const [users] = await db.execute('SELECT id FROM users WHERE is_active = TRUE');
+      
+      for (const user of users) {
+        await db.execute(
+          'INSERT INTO notifications (user_id, type, title, message) VALUES (?, ?, ?, ?)',
+          [user.id, 'admin_message', title, message]
+        );
+      }
+
+      res.json({ 
+        success: true, 
+        message: `Đã gửi thông báo đến ${users.length} người dùng` 
+      });
+    } else {
+      // Gửi cho cá nhân
+      const [users] = await db.execute('SELECT id, full_name FROM users WHERE id = ?', [target_user_id]);
+      
+      if (users.length === 0) {
+        return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+      }
+
+      await db.execute(
+        'INSERT INTO notifications (user_id, type, title, message) VALUES (?, ?, ?, ?)',
+        [target_user_id, 'admin_message', title, message]
+      );
+
+      res.json({ 
+        success: true, 
+        message: `Đã gửi thông báo đến ${users[0].full_name}` 
+      });
+    }
+  } catch (error) {
+    console.error('Error sending notification:', error);
+    res.status(500).json({ message: 'Lỗi server khi gửi thông báo' });
+  }
+});
+
+// Admin: Lấy danh sách người dùng để chọn gửi thông báo
+router.get('/admin/users', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Chỉ admin mới có quyền truy cập' });
+    }
+
+    const [users] = await db.execute(
+      'SELECT id, username, full_name, email FROM users WHERE is_active = TRUE ORDER BY full_name ASC'
+    );
+
+    res.json({ success: true, users });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+});
+
+module.exports = { router, createNotification, cleanupOldNotifications };

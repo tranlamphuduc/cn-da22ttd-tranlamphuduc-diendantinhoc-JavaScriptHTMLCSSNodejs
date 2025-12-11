@@ -10,7 +10,7 @@ const { auth } = require('../middleware/auth');
 const router = express.Router();
 
 // Cấu hình multer cho upload avatar
-const storage = multer.diskStorage({
+const avatarStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadPath = path.join(__dirname, '../uploads/avatars');
     if (!fs.existsSync(uploadPath)) {
@@ -24,8 +24,23 @@ const storage = multer.diskStorage({
   }
 });
 
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['.jpg', '.jpeg', '.png', '.gif'];
+// Cấu hình multer cho upload background
+const backgroundStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(__dirname, '../uploads/backgrounds');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'bg-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const imageFilter = (req, file, cb) => {
+  const allowedTypes = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
   const fileExt = path.extname(file.originalname).toLowerCase();
   
   if (allowedTypes.includes(fileExt)) {
@@ -36,10 +51,18 @@ const fileFilter = (req, file, cb) => {
 };
 
 const upload = multer({
-  storage,
-  fileFilter,
+  storage: avatarStorage,
+  fileFilter: imageFilter,
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB
+  }
+});
+
+const uploadBackground = multer({
+  storage: backgroundStorage,
+  fileFilter: imageFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB cho background
   }
 });
 
@@ -188,6 +211,94 @@ router.post('/avatar', auth, upload.single('avatar'), async (req, res) => {
     if (req.file && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+});
+
+// Upload background image cho theme
+router.post('/background', auth, uploadBackground.single('background'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Vui lòng chọn file ảnh' });
+    }
+
+    const user_id = req.user.id;
+    const backgroundPath = `/uploads/backgrounds/${req.file.filename}`;
+
+    // Lấy theme settings hiện tại
+    const [users] = await db.execute(
+      'SELECT theme_settings FROM users WHERE id = ?',
+      [user_id]
+    );
+
+    let themeSettings = users[0].theme_settings ? JSON.parse(users[0].theme_settings) : {};
+    
+    // Xóa background cũ nếu có (và là file local)
+    if (themeSettings.backgroundImage && themeSettings.backgroundImage.startsWith('/uploads/backgrounds/')) {
+      const oldBgPath = path.join(__dirname, '..', themeSettings.backgroundImage);
+      if (fs.existsSync(oldBgPath)) {
+        fs.unlinkSync(oldBgPath);
+      }
+    }
+
+    // Cập nhật backgroundImage trong theme settings
+    themeSettings.backgroundImage = backgroundPath;
+
+    await db.execute(
+      'UPDATE users SET theme_settings = ? WHERE id = ?',
+      [JSON.stringify(themeSettings), user_id]
+    );
+
+    res.json({
+      message: 'Upload ảnh nền thành công',
+      backgroundImage: backgroundPath,
+      theme_settings: themeSettings
+    });
+  } catch (error) {
+    console.error(error);
+    // Xóa file nếu có lỗi
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+});
+
+// Xóa background image
+router.delete('/background', auth, async (req, res) => {
+  try {
+    const user_id = req.user.id;
+
+    // Lấy theme settings hiện tại
+    const [users] = await db.execute(
+      'SELECT theme_settings FROM users WHERE id = ?',
+      [user_id]
+    );
+
+    let themeSettings = users[0].theme_settings ? JSON.parse(users[0].theme_settings) : {};
+    
+    // Xóa file background nếu là file local
+    if (themeSettings.backgroundImage && themeSettings.backgroundImage.startsWith('/uploads/backgrounds/')) {
+      const bgPath = path.join(__dirname, '..', themeSettings.backgroundImage);
+      if (fs.existsSync(bgPath)) {
+        fs.unlinkSync(bgPath);
+      }
+    }
+
+    // Xóa backgroundImage khỏi theme settings
+    themeSettings.backgroundImage = '';
+
+    await db.execute(
+      'UPDATE users SET theme_settings = ? WHERE id = ?',
+      [JSON.stringify(themeSettings), user_id]
+    );
+
+    res.json({
+      message: 'Đã xóa ảnh nền',
+      theme_settings: themeSettings
+    });
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ message: 'Lỗi server' });
   }
 });

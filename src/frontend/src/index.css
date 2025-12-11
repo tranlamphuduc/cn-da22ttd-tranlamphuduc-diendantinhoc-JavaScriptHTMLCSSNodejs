@@ -111,6 +111,7 @@ code {
 .post-content {
   line-height: 1.6;
   font-size: 16px;
+  color: var(--text-color);
 }
 
 .post-content h1,
@@ -122,7 +123,7 @@ code {
   margin-top: 1.5em;
   margin-bottom: 0.5em;
   font-weight: 600;
-  color: #333;
+  color: var(--text-color);
 }
 
 .post-content h1 {
@@ -144,6 +145,7 @@ code {
 .post-content p {
   margin-bottom: 1em;
   text-align: justify;
+  color: var(--text-color);
 }
 
 .post-content pre {
@@ -172,12 +174,12 @@ code {
 }
 
 .post-content blockquote {
-  border-left: 4px solid #007bff;
+  border-left: 4px solid var(--primary-color);
   padding-left: 15px;
   margin: 1.5em 0;
-  color: #666;
+  color: var(--text-color);
   font-style: italic;
-  background-color: #f8f9fa;
+  background-color: rgba(0, 0, 0, 0.05);
   padding: 15px;
   border-radius: 0 6px 6px 0;
 }
@@ -190,6 +192,7 @@ code {
 
 .post-content li {
   margin-bottom: 0.5em;
+  color: var(--text-color);
 }
 
 .post-content a {
@@ -1246,4 +1249,1975 @@ dal Styles */
 
 .text-info {
   color: #17a2b8 !important;
+}
+
+/* =
+=================== THEME CUSTOMIZATION STYLES ==================== */
+
+/* CSS Variables for theming */
+:root {
+  --primary-color: #007bff;
+  --text-color: #333333;
+  --card-background: #ffffff;
+  --card-opacity: 1;
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-size: 16px;
+  --border-radius: 8px;
+  --navbar-background: #ffffff;
+  --navbar-text-color: #333333;
+}
+
+/* Apply theme variables */
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size);
+  color: var(--text-color);
+  min-height: 100vh;
+}
+
+/* Theme-aware components */
+.post-card,
+.sidebar,
+.stat-card,
+.card,
+.user-content-card,
+.edit-profile-form {
+  background-color: var(--card-background);
+  opacity: var(--card-opacity);
+  border-radius: var(--border-radius);
+  color: var(--text-color);
+}
+
+/* Áp dụng màu chữ cho tất cả text trong card */
+.post-card h1, .post-card h2, .post-card h3, .post-card h4, .post-card h5, .post-card h6,
+.post-card p, .post-card span, .post-card a.text-dark,
+.card h1, .card h2, .card h3, .card h4, .card h5, .card h6,
+.card p, .card span, .card a.text-dark,
+.sidebar h1, .sidebar h2, .sidebar h3, .sidebar h4, .sidebar h5, .sidebar h6,
+.sidebar p, .sidebar span {
+  color: var(--text-color) !important;
+}
+
+/* Text muted trong theme */
+.post-card .text-muted,
+.card .text-muted,
+.sidebar .text-muted {
+  color: var(--text-color) !important;
+  opacity: 0.7;
+}
+
+/* Sidebar list-group items */
+.sidebar .list-group-item {
+  background-color: var(--card-background);
+  color: var(--text-color);
+  border-color: rgba(128, 128, 128, 0.2);
+}
+
+.sidebar .list-group-item:hover {
+  background-color: rgba(128, 128, 128, 0.1);
+}
+
+.sidebar .list-group-item.active {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #ffffff;
+}
+
+.sidebar .list-group-item span {
+  color: inherit !important;
+}
+
+/* Stat card text */
+.stat-card .stat-label,
+.stat-card small {
+  color: var(--text-color) !important;
+  opacity: 0.8;
+}
+
+/* Card header với màu chữ tùy chỉnh */
+.card-header {
+  color: var(--navbar-text-color);
+}
+
+.card-header h4,
+.card-header h5,
+.card-header span {
+  color: inherit !important;
+}
+
+/* Bg-light trong theme */
+.bg-light {
+  background-color: var(--card-background) !important;
+}
+
+.bg-light small,
+.bg-light .text-muted {
+  color: var(--text-color) !important;
+  opacity: 0.7;
+}
+
+.navbar {
+  background-color: var(--navbar-background) !important;
+}
+
+.navbar .navbar-brand,
+.navbar .nav-link {
+  color: var(--navbar-text-color) !important;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-color);
+  filter: brightness(0.9);
+  border-color: var(--primary-color);
+}
+
+.btn-outline-primary {
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+a {
+  color: var(--primary-color);
+}
+
+/* Theme Toggle Button */
+.theme-toggle-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-toggle-btn:hover {
+  transform: scale(1.1) rotate(15deg);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+/* Theme Settings Panel */
+.theme-settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 1100;
+  animation: fadeIn 0.2s ease;
+}
+
+.theme-settings-panel {
+  width: 380px;
+  max-width: 100%;
+  height: 100%;
+  background: white;
+  box-shadow: -5px 0 25px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.theme-settings-header {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: #ffffff !important;
+}
+
+.theme-settings-header h4 {
+  margin: 0;
+  font-size: 18px;
+  color: #ffffff !important;
+}
+
+.theme-settings-header h4 i {
+  color: #ffffff !important;
+}
+
+.theme-settings-header .btn-close {
+  filter: brightness(0) invert(1);
+}
+
+/* Theme Tabs */
+.theme-tabs {
+  display: flex;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+}
+
+.theme-tab {
+  flex: 1;
+  padding: 12px 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: #666;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+}
+
+.theme-tab:hover {
+  color: #667eea;
+  background: #f0f0f0;
+}
+
+.theme-tab.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+  background: white;
+}
+
+/* Theme Settings Body */
+.theme-settings-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setting-group label {
+  font-weight: 500;
+  font-size: 14px;
+  color: #333;
+}
+
+.color-input-wrapper {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.color-input-wrapper input[type="color"] {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.color-input-wrapper input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.color-input-wrapper input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 5px;
+}
+
+.color-input-wrapper input[type="text"] {
+  flex: 1;
+}
+
+/* Background Preview */
+.bg-preview {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid #ddd;
+}
+
+.bg-preview img {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+}
+
+/* Typography Preview */
+.typography-preview {
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+/* Preset Grid */
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.preset-card {
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.preset-card:hover {
+  transform: translateY(-3px);
+}
+
+.preset-preview {
+  height: 80px;
+  border-radius: 8px;
+  border: 2px solid #ddd;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.preset-navbar {
+  height: 15px;
+  width: 100%;
+}
+
+.preset-card-preview {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  height: 40px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.preset-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Theme Settings Footer */
+.theme-settings-footer {
+  padding: 15px 20px;
+  border-top: 1px solid #eee;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  background: #f8f9fa;
+}
+
+.theme-settings-footer .btn {
+  flex: 1;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .theme-settings-panel {
+    width: 100%;
+  }
+  
+  .theme-tab {
+    padding: 10px 5px;
+    font-size: 11px;
+  }
+  
+  .preset-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+}
+
+/* Form Range Styling */
+.form-range {
+  width: 100%;
+  height: 8px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #ddd;
+  border-radius: 4px;
+  outline: none;
+}
+
+.form-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+
+/* ==================== THEME TEXT COLOR FIXES ==================== */
+
+/* Comments section */
+.comments-list .bg-light,
+.comments-list .bg-white {
+  background-color: var(--card-background) !important;
+}
+
+.comments-list h6,
+.comments-list p,
+.comments-list span,
+.comments-list small {
+  color: var(--text-color) !important;
+}
+
+.comments-list .text-muted {
+  color: var(--text-color) !important;
+  opacity: 0.7;
+}
+
+.comments-list .text-dark {
+  color: var(--text-color) !important;
+}
+
+/* Replies */
+.replies .bg-white,
+.replies .border {
+  background-color: var(--card-background) !important;
+  border-color: rgba(128, 128, 128, 0.3) !important;
+}
+
+.replies h6,
+.replies p,
+.replies span,
+.replies small,
+.replies .fw-bold {
+  color: var(--text-color) !important;
+}
+
+/* Reply form */
+.reply-form {
+  background-color: var(--card-background) !important;
+  border-color: rgba(128, 128, 128, 0.3) !important;
+}
+
+/* Tags badges */
+.badge.bg-light {
+  background-color: var(--card-background) !important;
+  color: var(--text-color) !important;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+}
+
+.badge.bg-light.text-dark {
+  color: var(--text-color) !important;
+}
+
+/* Popular tags in sidebar */
+.sidebar .badge {
+  color: var(--text-color) !important;
+}
+
+/* Form controls */
+.form-control,
+.form-select {
+  background-color: var(--card-background);
+  color: var(--text-color);
+  border-color: rgba(128, 128, 128, 0.3);
+}
+
+.form-control::placeholder {
+  color: var(--text-color);
+  opacity: 0.5;
+}
+
+.form-control:focus,
+.form-select:focus {
+  background-color: var(--card-background);
+  color: var(--text-color);
+}
+
+/* Textarea */
+textarea.form-control {
+  background-color: var(--card-background);
+  color: var(--text-color);
+}
+
+/* Alert boxes */
+.alert {
+  color: var(--text-color);
+}
+
+.alert-info {
+  background-color: rgba(13, 202, 240, 0.1);
+  border-color: rgba(13, 202, 240, 0.3);
+}
+
+/* Table */
+.table {
+  color: var(--text-color);
+}
+
+.table th,
+.table td {
+  color: var(--text-color);
+  border-color: rgba(128, 128, 128, 0.2);
+}
+
+.table-light th {
+  background-color: var(--card-background);
+  color: var(--text-color);
+}
+
+/* Accordion */
+.accordion-item {
+  background-color: var(--card-background);
+  border-color: rgba(128, 128, 128, 0.2);
+}
+
+.accordion-button {
+  background-color: var(--card-background);
+  color: var(--text-color);
+}
+
+.accordion-button:not(.collapsed) {
+  background-color: var(--card-background);
+  color: var(--primary-color);
+}
+
+.accordion-body {
+  background-color: var(--card-background);
+  color: var(--text-color);
+}
+
+/* Dropdown menu */
+.dropdown-menu {
+  background-color: var(--card-background);
+  border-color: rgba(128, 128, 128, 0.2);
+}
+
+.dropdown-item {
+  color: var(--text-color);
+}
+
+.dropdown-item:hover {
+  background-color: rgba(128, 128, 128, 0.1);
+  color: var(--text-color);
+}
+
+/* Modal */
+.modal-content {
+  background-color: var(--card-background);
+  color: var(--text-color);
+}
+
+.modal-header {
+  border-color: rgba(128, 128, 128, 0.2);
+}
+
+.modal-header h3,
+.modal-header h4,
+.modal-header h5 {
+  color: var(--text-color);
+}
+
+/* Links */
+a.text-dark {
+  color: var(--text-color) !important;
+}
+
+a.text-decoration-none.text-dark:hover {
+  color: var(--primary-color) !important;
+}
+
+/* Headings in cards */
+.card h1, .card h2, .card h3, .card h4, .card h5, .card h6 {
+  color: var(--text-color);
+}
+
+/* Rules page specific */
+.rules-content h5,
+.rules-content p,
+.rules-content li,
+.rules-content span {
+  color: var(--text-color);
+}
+
+.rules-content .border-bottom {
+  border-color: rgba(128, 128, 128, 0.3) !important;
+}
+
+/* Contact page */
+.contact-info h6,
+.contact-info p {
+  color: var(--text-color);
+}
+
+/* Profile page */
+.nav-tabs .nav-link {
+  color: var(--text-color);
+  opacity: 0.7;
+}
+
+.nav-tabs .nav-link.active {
+  color: var(--primary-color);
+  opacity: 1;
+  background-color: transparent;
+}
+
+.nav-tabs .nav-link:hover {
+  color: var(--primary-color);
+}
+
+/* General text classes override */
+.text-dark {
+  color: var(--text-color) !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-color);
+}
+
+/* Border colors */
+.border-top,
+.border-bottom,
+.border {
+  border-color: rgba(128, 128, 128, 0.2) !important;
+}
+
+
+/* ==================== EXTENDED THEME COLORS ==================== */
+
+/* CSS Variables mở rộng */
+:root {
+  --link-color: #007bff;
+  --link-hover-color: #0056b3;
+  --button-color: #007bff;
+  --button-text-color: #ffffff;
+  --border-color: #dee2e6;
+  --input-background: #ffffff;
+  --input-text-color: #495057;
+  --badge-background: #667eea;
+  --badge-text-color: #ffffff;
+  --footer-background: #343a40;
+  --footer-text-color: #ffffff;
+}
+
+/* Link colors */
+a:not(.btn):not(.nav-link):not(.navbar-brand):not(.dropdown-item) {
+  color: var(--link-color);
+}
+
+a:not(.btn):not(.nav-link):not(.navbar-brand):not(.dropdown-item):hover {
+  color: var(--link-hover-color);
+}
+
+/* Button colors */
+.btn-primary {
+  background-color: var(--button-color) !important;
+  border-color: var(--button-color) !important;
+  color: var(--button-text-color) !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+  background-color: var(--button-color) !important;
+  border-color: var(--button-color) !important;
+  filter: brightness(0.85);
+}
+
+.btn-outline-primary {
+  color: var(--button-color) !important;
+  border-color: var(--button-color) !important;
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--button-color) !important;
+  color: var(--button-text-color) !important;
+}
+
+/* Border colors */
+.card,
+.post-card,
+.sidebar,
+.form-control,
+.form-select,
+.input-group-text,
+.list-group-item,
+.table,
+.table th,
+.table td {
+  border-color: var(--border-color) !important;
+}
+
+.border,
+.border-top,
+.border-bottom,
+.border-start,
+.border-end {
+  border-color: var(--border-color) !important;
+}
+
+/* Input colors */
+.form-control,
+.form-select,
+textarea.form-control {
+  background-color: var(--input-background);
+  color: var(--input-text-color);
+  border-color: var(--border-color);
+}
+
+.form-control:focus,
+.form-select:focus {
+  background-color: var(--input-background);
+  color: var(--input-text-color);
+  border-color: var(--button-color);
+  box-shadow: 0 0 0 0.2rem rgba(var(--button-color), 0.25);
+}
+
+.form-control::placeholder {
+  color: var(--input-text-color);
+  opacity: 0.6;
+}
+
+.input-group-text {
+  background-color: var(--input-background);
+  color: var(--input-text-color);
+  border-color: var(--border-color);
+}
+
+/* Badge/Tag colors */
+.badge.bg-primary,
+.badge.bg-info,
+.tag-badge,
+.post-tag {
+  background-color: var(--badge-background) !important;
+  color: var(--badge-text-color) !important;
+}
+
+.badge.bg-light {
+  background-color: var(--card-background) !important;
+  color: var(--text-color) !important;
+  border: 1px solid var(--border-color);
+}
+
+/* Tags in posts */
+.post-tags .badge,
+.tags-container .badge {
+  background: var(--badge-background) !important;
+  color: var(--badge-text-color) !important;
+}
+
+/* Footer colors */
+footer,
+.footer {
+  background-color: var(--footer-background) !important;
+  color: var(--footer-text-color) !important;
+}
+
+footer a,
+.footer a {
+  color: var(--footer-text-color) !important;
+  opacity: 0.8;
+}
+
+footer a:hover,
+.footer a:hover {
+  color: var(--footer-text-color) !important;
+  opacity: 1;
+}
+
+/* Search bar với theme colors */
+.search-form .form-control {
+  background-color: var(--input-background);
+  color: var(--input-text-color);
+  border-color: var(--border-color);
+}
+
+.search-form .input-group-text {
+  background-color: var(--input-background);
+  color: var(--input-text-color);
+  border-color: var(--border-color);
+}
+
+.search-results-dropdown {
+  background-color: var(--card-background);
+  border-color: var(--border-color);
+}
+
+.search-result-item {
+  color: var(--text-color);
+}
+
+.search-result-item:hover {
+  background-color: rgba(128, 128, 128, 0.1);
+}
+
+/* Tag input với theme colors */
+.tag-input-container {
+  background-color: var(--input-background);
+  border-color: var(--border-color);
+}
+
+.tag-input-container input {
+  background-color: var(--input-background);
+  color: var(--input-text-color);
+}
+
+.tag-badge {
+  background-color: var(--badge-background);
+  color: var(--badge-text-color);
+}
+
+.tag-suggestions {
+  background-color: var(--card-background);
+  border-color: var(--border-color);
+}
+
+.tag-suggestion-item {
+  color: var(--text-color);
+}
+
+.tag-suggestion-item:hover {
+  background-color: rgba(128, 128, 128, 0.1);
+}
+
+/* Pagination với theme colors */
+.pagination .page-link {
+  background-color: var(--card-background);
+  color: var(--link-color);
+  border-color: var(--border-color);
+}
+
+.pagination .page-link:hover {
+  background-color: rgba(128, 128, 128, 0.1);
+  color: var(--link-hover-color);
+}
+
+.pagination .page-item.active .page-link {
+  background-color: var(--button-color);
+  border-color: var(--button-color);
+  color: var(--button-text-color);
+}
+
+/* Alert với theme colors */
+.alert {
+  border-color: var(--border-color);
+}
+
+/* Table với theme colors */
+.table {
+  color: var(--text-color);
+}
+
+.table thead th {
+  background-color: var(--card-background);
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
+.table tbody td {
+  background-color: var(--card-background);
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+  background-color: rgba(128, 128, 128, 0.05);
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(128, 128, 128, 0.1);
+}
+
+/* Breadcrumb với theme colors */
+.breadcrumb {
+  background-color: var(--card-background);
+}
+
+.breadcrumb-item a {
+  color: var(--link-color);
+}
+
+.breadcrumb-item.active {
+  color: var(--text-color);
+  opacity: 0.7;
+}
+
+/* Progress bar với theme colors */
+.progress {
+  background-color: rgba(128, 128, 128, 0.2);
+}
+
+.progress-bar {
+  background-color: var(--button-color);
+}
+
+/* Spinner với theme colors */
+.spinner-border {
+  color: var(--button-color);
+}
+
+/* Color section title trong theme settings */
+.color-section-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #667eea;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 15px;
+}
+
+
+/* ==================== THEME SETTINGS PANEL - FIXED COLORS ==================== */
+/* Giữ nguyên màu cho các input trong panel tùy chỉnh giao diện */
+
+.theme-settings-panel {
+  background-color: #ffffff !important;
+  color: #333333 !important;
+}
+
+.theme-settings-panel .setting-group label {
+  color: #333333 !important;
+}
+
+.theme-settings-panel .form-control,
+.theme-settings-panel .form-select,
+.theme-settings-panel input[type="text"] {
+  background-color: #ffffff !important;
+  color: #333333 !important;
+  border-color: #dee2e6 !important;
+}
+
+.theme-settings-panel .form-control::placeholder {
+  color: #6c757d !important;
+}
+
+.theme-settings-panel .color-input-wrapper input[type="text"] {
+  background-color: #ffffff !important;
+  color: #333333 !important;
+  border-color: #dee2e6 !important;
+}
+
+.theme-settings-panel .color-section-title {
+  color: #667eea !important;
+}
+
+.theme-settings-panel .text-muted,
+.theme-settings-panel small {
+  color: #6c757d !important;
+}
+
+.theme-settings-panel .preset-name {
+  color: #333333 !important;
+}
+
+.theme-settings-panel .typography-preview {
+  background-color: #f8f9fa !important;
+  border-color: #dee2e6 !important;
+}
+
+.theme-settings-footer {
+  background-color: #f8f9fa !important;
+  border-color: #eeeeee !important;
+}
+
+.theme-tabs {
+  background-color: #f8f9fa !important;
+}
+
+.theme-tab {
+  color: #666666 !important;
+}
+
+.theme-tab:hover {
+  color: #667eea !important;
+  background-color: #f0f0f0 !important;
+}
+
+.theme-tab.active {
+  color: #667eea !important;
+  background-color: #ffffff !important;
+}
+
+
+/* ==================== FIX CONTRAST ISSUES ==================== */
+
+/* Card header text - luôn trắng trên nền gradient */
+.card-header.bg-primary,
+.card-header.bg-info,
+.card-header.bg-success,
+.card-header.bg-warning,
+.card-header.bg-danger {
+  color: #ffffff !important;
+}
+
+.card-header.bg-primary *,
+.card-header.bg-info *,
+.card-header.bg-success *,
+.card-header.bg-warning *,
+.card-header.bg-danger * {
+  color: #ffffff !important;
+}
+
+/* Category badges - đảm bảo chữ luôn đọc được */
+.category-badge {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Sidebar category badges với số lượng */
+.sidebar .badge.rounded-pill {
+  background-color: #6c757d !important;
+  color: #ffffff !important;
+}
+
+/* Table header và rows */
+.table thead th {
+  background-color: #f8f9fa !important;
+  color: #212529 !important;
+}
+
+.table tbody td {
+  color: var(--text-color, #212529);
+}
+
+/* Report status badges */
+.badge.bg-danger {
+  background-color: #dc3545 !important;
+  color: #ffffff !important;
+}
+
+.badge.bg-secondary {
+  background-color: #6c757d !important;
+  color: #ffffff !important;
+}
+
+.badge.bg-success {
+  background-color: #198754 !important;
+  color: #ffffff !important;
+}
+
+.badge.bg-warning {
+  background-color: #ffc107 !important;
+  color: #212529 !important;
+}
+
+.badge.bg-info {
+  background-color: #0dcaf0 !important;
+  color: #212529 !important;
+}
+
+.badge.bg-primary {
+  background-color: #0d6efd !important;
+  color: #ffffff !important;
+}
+
+/* Fix cho các nút và link trong card header */
+.card-header a,
+.card-header .btn {
+  color: inherit !important;
+}
+
+/* Fix cho text trong các section có nền màu */
+.bg-primary, .bg-info, .bg-success, .bg-danger {
+  color: #ffffff !important;
+}
+
+.bg-warning, .bg-light {
+  color: #212529 !important;
+}
+
+/* Fix cho list group items trong sidebar */
+.list-group-item {
+  background-color: var(--card-background, #ffffff);
+  color: var(--text-color, #212529);
+  border-color: var(--border-color, #dee2e6);
+}
+
+.list-group-item .badge {
+  color: #ffffff !important;
+}
+
+/* Fix cho các số trong badge tròn (category count) */
+.rounded-pill.bg-secondary,
+.rounded-pill.bg-primary {
+  color: #ffffff !important;
+}
+
+/* Fix cho alert messages */
+.alert-success {
+  background-color: #d1e7dd !important;
+  color: #0f5132 !important;
+  border-color: #badbcc !important;
+}
+
+.alert-danger {
+  background-color: #f8d7da !important;
+  color: #842029 !important;
+  border-color: #f5c2c7 !important;
+}
+
+.alert-warning {
+  background-color: #fff3cd !important;
+  color: #664d03 !important;
+  border-color: #ffecb5 !important;
+}
+
+.alert-info {
+  background-color: #cff4fc !important;
+  color: #055160 !important;
+  border-color: #b6effb !important;
+}
+
+/* Fix cho report type badges */
+.badge[class*="bg-"] {
+  font-weight: 500;
+}
+
+/* Đảm bảo text trong form luôn đọc được */
+.form-control,
+.form-select {
+  color: #212529 !important;
+  background-color: #ffffff !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+  color: #212529 !important;
+  background-color: #ffffff !important;
+}
+
+/* Fix cho placeholder */
+.form-control::placeholder {
+  color: #6c757d !important;
+  opacity: 1;
+}
+
+
+/* ==================== FIX CARD HEADER COLORS ==================== */
+
+/* Đảm bảo tất cả card header có nền màu đều có chữ trắng */
+.card-header[class*="bg-"] {
+  color: #ffffff !important;
+}
+
+.card-header[class*="bg-"] h1,
+.card-header[class*="bg-"] h2,
+.card-header[class*="bg-"] h3,
+.card-header[class*="bg-"] h4,
+.card-header[class*="bg-"] h5,
+.card-header[class*="bg-"] h6,
+.card-header[class*="bg-"] p,
+.card-header[class*="bg-"] span,
+.card-header[class*="bg-"] i,
+.card-header[class*="bg-"] a {
+  color: #ffffff !important;
+}
+
+/* Card header với gradient */
+.card-header {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.card-header * {
+  color: #ffffff !important;
+}
+
+/* Ngoại trừ card header có class bg-light hoặc bg-white */
+.card-header.bg-light,
+.card-header.bg-white {
+  background: #f8f9fa !important;
+  color: #212529 !important;
+}
+
+.card-header.bg-light *,
+.card-header.bg-white * {
+  color: #212529 !important;
+}
+
+/* Fix cho các section title trong sidebar */
+.sidebar h5,
+.sidebar h6,
+.sidebar .fw-bold {
+  color: var(--text-color, #212529) !important;
+}
+
+/* Fix cho report section headers */
+.card .card-header .mb-0,
+.card .card-header h4,
+.card .card-header h5 {
+  color: #ffffff !important;
+}
+
+
+/* ==================== FIX TEXT MUTED COLOR ==================== */
+
+/* Làm đậm hơn các text muted để dễ đọc */
+.text-muted {
+  color: #5a6268 !important;
+}
+
+/* Post meta info (lượt xem, bình luận, ngày) */
+.post-card .text-muted,
+.post-meta .text-muted,
+small.text-muted {
+  color: #5a6268 !important;
+  font-weight: 500;
+}
+
+/* Các icon và text trong post info */
+.post-card small,
+.post-info small,
+.post-meta small {
+  color: #5a6268 !important;
+}
+
+/* Link trong post (YouTube, etc) */
+.post-content a,
+.post-card a.text-muted {
+  color: #0d6efd !important;
+}
+
+.post-card a.text-muted:hover {
+  color: #0a58ca !important;
+}
+
+
+/* ==================== FIX ALERT/BOX TEXT IN DARK THEME ==================== */
+
+/* Đảm bảo text trong các alert box luôn đọc được */
+.alert,
+.bg-danger-subtle,
+.bg-warning-subtle,
+.bg-info-subtle,
+.bg-success-subtle,
+.bg-light {
+  color: #212529 !important;
+}
+
+.alert *,
+.bg-danger-subtle *,
+.bg-warning-subtle *,
+.bg-info-subtle *,
+.bg-success-subtle *,
+[class*="bg-"][class*="-subtle"] * {
+  color: #212529 !important;
+}
+
+/* Rules page - các box nội dung */
+.rules-content .bg-danger-subtle,
+.rules-content .bg-warning-subtle,
+.rules-content .alert {
+  color: #212529 !important;
+}
+
+.rules-content .bg-danger-subtle li,
+.rules-content .bg-danger-subtle p,
+.rules-content .bg-warning-subtle li,
+.rules-content .bg-warning-subtle p {
+  color: #212529 !important;
+}
+
+/* Box có nền màu nhạt */
+.border-danger,
+.border-warning,
+.border-info,
+.border-success {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.border-danger *,
+.border-warning *,
+.border-info *,
+.border-success * {
+  color: #212529 !important;
+}
+
+/* Rounded boxes trong rules */
+.rounded-3[class*="bg-"] {
+  color: #212529 !important;
+}
+
+.rounded-3[class*="bg-"] ul,
+.rounded-3[class*="bg-"] li,
+.rounded-3[class*="bg-"] p {
+  color: #212529 !important;
+}
+
+
+/* ==================== FIX POST META TEXT COLOR ==================== */
+
+/* Dòng thông tin bài viết (lượt xem, bình luận, ngày) - màu text của theme */
+.post-card .text-muted,
+.post-card small,
+.post-card .small,
+.post-card .post-meta,
+.card-body .text-muted,
+.card-body small {
+  color: var(--text-color) !important;
+  opacity: 0.8 !important;
+}
+
+.post-card .text-muted i,
+.post-card small i {
+  color: var(--text-color) !important;
+  opacity: 0.8 !important;
+}
+
+
+/* ==================== FIX COMMENT BOX IN DARK MODE ==================== */
+
+/* Khung bình luận */
+.comments-list .bg-light,
+.comments-list .bg-white,
+.comment-item,
+.comment-box {
+  background-color: var(--card-background) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+/* Reply boxes */
+.replies .bg-white,
+.replies .border,
+.reply-item {
+  background-color: var(--card-background) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 6px;
+}
+
+/* Comment text */
+.comments-list p,
+.comments-list span,
+.comments-list h6,
+.comments-list small,
+.comment-item p,
+.comment-item span {
+  color: var(--text-color) !important;
+}
+
+/* Comment author name */
+.comments-list .fw-bold,
+.comments-list h6 {
+  color: var(--text-color) !important;
+}
+
+/* Comment date */
+.comments-list .text-muted,
+.comments-list small.text-muted {
+  color: var(--text-color) !important;
+  opacity: 0.7 !important;
+}
+
+/* Reply form */
+.reply-form {
+  background-color: var(--card-background) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Comment textarea */
+.comments-list textarea,
+.reply-form textarea {
+  background-color: #ffffff !important;
+  color: #212529 !important;
+  border: 1px solid #ced4da !important;
+}
+
+.comments-list textarea::placeholder,
+.reply-form textarea::placeholder {
+  color: #6c757d !important;
+}
+
+
+/* ==================== FIX REPORT MODAL ==================== */
+
+/* Modal báo cáo - giữ nền trắng, chữ đen */
+.modal-content {
+  background-color: #ffffff !important;
+  color: #212529 !important;
+}
+
+.modal-content h3,
+.modal-content h4,
+.modal-content h5,
+.modal-content p,
+.modal-content span,
+.modal-content label {
+  color: #212529 !important;
+}
+
+.modal-content .text-muted {
+  color: #6c757d !important;
+}
+
+/* Report info box */
+.modal-content .bg-light {
+  background-color: #f8f9fa !important;
+  color: #212529 !important;
+}
+
+.modal-content .bg-light * {
+  color: #212529 !important;
+}
+
+/* Alert trong modal */
+.modal-content .alert {
+  color: #212529 !important;
+}
+
+.modal-content .alert-info {
+  background-color: #cff4fc !important;
+  border-color: #b6effb !important;
+  color: #055160 !important;
+}
+
+.modal-content .alert-warning {
+  background-color: #fff3cd !important;
+  border-color: #ffecb5 !important;
+  color: #664d03 !important;
+}
+
+/* Form trong modal */
+.modal-content .form-control,
+.modal-content .form-select,
+.modal-content textarea {
+  background-color: #ffffff !important;
+  color: #212529 !important;
+  border-color: #ced4da !important;
+}
+
+.modal-content .form-control::placeholder,
+.modal-content textarea::placeholder {
+  color: #6c757d !important;
+}
+
+/* Character count */
+.modal-content small,
+.modal-content .small {
+  color: #6c757d !important;
+}
+
+/* Border left accent */
+.modal-content .border-start {
+  border-color: #0d6efd !important;
+}
+
+/* Close button */
+.modal-content .btn-close {
+  filter: none !important;
+}
+
+
+/* ==================== FIX REPORT MODAL TEXT - STRONGER ==================== */
+
+/* Tất cả text trong modal phải đen đậm */
+.modal-content,
+.modal-content * {
+  color: #212529 !important;
+}
+
+/* Box "Đối tượng báo cáo" */
+.modal-content .border-start.bg-light,
+.modal-content .bg-light.border-start {
+  background-color: #e9ecef !important;
+  color: #212529 !important;
+}
+
+.modal-content .border-start.bg-light *,
+.modal-content .bg-light.border-start * {
+  color: #212529 !important;
+}
+
+/* Text muted trong modal - đậm hơn */
+.modal-content .text-muted {
+  color: #495057 !important;
+}
+
+/* Character count "0/1000 ký tự" */
+.modal-content small.text-muted,
+.modal-content .small.text-muted {
+  color: #495057 !important;
+}
+
+/* Alert info box */
+.modal-content .alert-info {
+  background-color: #cff4fc !important;
+  color: #055160 !important;
+}
+
+.modal-content .alert-info * {
+  color: #055160 !important;
+}
+
+/* Alert warning box */
+.modal-content .alert-warning {
+  background-color: #fff3cd !important;
+  color: #664d03 !important;
+}
+
+.modal-content .alert-warning * {
+  color: #664d03 !important;
+}
+
+/* Ngoại trừ buttons */
+.modal-content .btn {
+  color: #ffffff !important;
+}
+
+.modal-content .btn-secondary {
+  color: #ffffff !important;
+}
+
+.modal-content .btn-outline-secondary {
+  color: #6c757d !important;
+}
+
+.modal-content .btn-outline-secondary:hover {
+  color: #ffffff !important;
+}
+
+
+/* ==================== FIX ADMIN REPORT MODAL ==================== */
+
+/* Modal xử lý báo cáo của admin */
+.modal-overlay .modal-content,
+.modal-content {
+  background-color: #ffffff !important;
+}
+
+.modal-content .modal-header,
+.modal-content .modal-body,
+.modal-content .modal-footer {
+  background-color: #ffffff !important;
+  color: #212529 !important;
+}
+
+.modal-content .modal-header *,
+.modal-content .modal-body *,
+.modal-content .modal-footer * {
+  color: #212529 !important;
+}
+
+/* Report info section - nền xám nhạt */
+.modal-content .report-info,
+.modal-content .bg-light {
+  background-color: #f8f9fa !important;
+  color: #212529 !important;
+}
+
+.modal-content .report-info *,
+.modal-content .bg-light * {
+  color: #212529 !important;
+}
+
+/* Info rows */
+.modal-content .info-row,
+.modal-content .info-row strong,
+.modal-content .info-row span {
+  color: #212529 !important;
+}
+
+/* Description box */
+.modal-content .description {
+  background-color: #ffffff !important;
+  color: #212529 !important;
+  border-color: #dee2e6 !important;
+}
+
+/* Form labels */
+.modal-content .form-label,
+.modal-content label {
+  color: #212529 !important;
+}
+
+/* Form inputs */
+.modal-content .form-control,
+.modal-content .form-select,
+.modal-content textarea,
+.modal-content input {
+  background-color: #ffffff !important;
+  color: #212529 !important;
+  border-color: #ced4da !important;
+}
+
+.modal-content .form-control::placeholder,
+.modal-content textarea::placeholder {
+  color: #6c757d !important;
+}
+
+/* Checkbox labels */
+.modal-content .form-check-label {
+  color: #212529 !important;
+}
+
+/* Small text */
+.modal-content small,
+.modal-content .text-muted {
+  color: #6c757d !important;
+}
+
+/* Buttons - giữ màu trắng */
+.modal-content .btn {
+  color: #ffffff !important;
+}
+
+.modal-content .btn-secondary {
+  background-color: #6c757d !important;
+}
+
+.modal-content .btn-primary {
+  background-color: #0d6efd !important;
+}
+
+.modal-content .btn-danger {
+  background-color: #dc3545 !important;
+}
+
+/* Close button */
+.modal-content .close-btn,
+.modal-content .btn-close {
+  color: #212529 !important;
+  filter: none !important;
+}
+
+/* Badge trong modal */
+.modal-content .badge {
+  color: #ffffff !important;
+}
+
+
+/* ==================== FIX ADMIN REPORT MODAL - STRONGER ==================== */
+
+/* Modal Bootstrap */
+.modal .modal-content {
+  background-color: #ffffff !important;
+  color: #212529 !important;
+}
+
+.modal .modal-header {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #dee2e6 !important;
+}
+
+.modal .modal-header * {
+  color: #212529 !important;
+}
+
+.modal .modal-body {
+  background-color: #ffffff !important;
+  color: #212529 !important;
+}
+
+/* Table trong modal */
+.modal .table {
+  color: #212529 !important;
+  background-color: #ffffff !important;
+}
+
+.modal .table td,
+.modal .table th {
+  color: #212529 !important;
+  background-color: #ffffff !important;
+  border-color: #dee2e6 !important;
+}
+
+.modal .table td strong {
+  color: #212529 !important;
+}
+
+/* Headings trong modal */
+.modal h6,
+.modal .modal-body h6 {
+  color: #212529 !important;
+}
+
+/* Box bg-light trong modal */
+.modal .bg-light {
+  background-color: #f8f9fa !important;
+  color: #212529 !important;
+}
+
+.modal .bg-light * {
+  color: #212529 !important;
+}
+
+.modal .bg-light strong {
+  color: #212529 !important;
+}
+
+.modal .bg-light p {
+  color: #212529 !important;
+}
+
+/* Form elements trong modal */
+.modal .form-label,
+.modal label {
+  color: #212529 !important;
+}
+
+.modal .form-label strong {
+  color: #212529 !important;
+}
+
+.modal .form-select,
+.modal .form-control,
+.modal textarea {
+  background-color: #ffffff !important;
+  color: #212529 !important;
+  border-color: #ced4da !important;
+}
+
+/* Checkbox */
+.modal .form-check-label {
+  color: #212529 !important;
+}
+
+.modal .form-check-label strong {
+  color: #dc3545 !important;
+}
+
+/* Form text */
+.modal .form-text {
+  color: #6c757d !important;
+}
+
+/* Text muted */
+.modal .text-muted {
+  color: #6c757d !important;
+}
+
+/* Small text */
+.modal small {
+  color: #6c757d !important;
+}
+
+/* Badges - giữ màu trắng */
+.modal .badge {
+  color: #ffffff !important;
+}
+
+/* Buttons */
+.modal .btn-close {
+  filter: none !important;
+}
+
+.modal .modal-footer {
+  background-color: #ffffff !important;
+  border-top: 1px solid #dee2e6 !important;
+}
+
+
+/* ==================== FIX CHECKBOX IN MODAL ==================== */
+
+/* Checkbox input - đảm bảo có thể click */
+.modal .form-check-input {
+  background-color: #ffffff !important;
+  border-color: #ced4da !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  opacity: 1 !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+.modal .form-check-input:checked {
+  background-color: #0d6efd !important;
+  border-color: #0d6efd !important;
+}
+
+.modal .form-check {
+  pointer-events: auto !important;
+}
+
+.modal .form-check-label {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+
+/* ==================== FIX OUTLINE BUTTON TEXT COLOR ==================== */
+
+/* Fix cho modal và các nút outline - đảm bảo text luôn hiển thị */
+.modal .btn-outline-warning,
+.modal-content .btn-outline-warning,
+button.btn-outline-warning {
+  color: #856404 !important;
+  border-color: #ffc107 !important;
+  background-color: #fff !important;
+}
+
+.modal .btn-outline-warning:hover,
+.modal-content .btn-outline-warning:hover,
+button.btn-outline-warning:hover {
+  color: #212529 !important;
+  background-color: #ffc107 !important;
+}
+
+.modal .btn-outline-success,
+.modal-content .btn-outline-success,
+button.btn-outline-success {
+  color: #155724 !important;
+  border-color: #28a745 !important;
+  background-color: #fff !important;
+}
+
+.modal .btn-outline-success:hover,
+.modal-content .btn-outline-success:hover,
+button.btn-outline-success:hover {
+  color: #fff !important;
+  background-color: #28a745 !important;
+}
+
+.modal .btn-outline-danger,
+.modal-content .btn-outline-danger,
+button.btn-outline-danger {
+  color: #721c24 !important;
+  border-color: #dc3545 !important;
+  background-color: #fff !important;
+}
+
+.modal .btn-outline-danger:hover,
+.modal-content .btn-outline-danger:hover,
+button.btn-outline-danger:hover {
+  color: #fff !important;
+  background-color: #dc3545 !important;
+}
+
+.modal .btn-outline-primary,
+.modal-content .btn-outline-primary,
+button.btn-outline-primary {
+  color: #004085 !important;
+  border-color: #007bff !important;
+  background-color: #fff !important;
+}
+
+.modal .btn-outline-primary:hover,
+.modal-content .btn-outline-primary:hover,
+button.btn-outline-primary:hover {
+  color: #fff !important;
+  background-color: #007bff !important;
+}
+
+.modal .btn-outline-secondary,
+.modal-content .btn-outline-secondary,
+button.btn-outline-secondary {
+  color: #383d41 !important;
+  border-color: #6c757d !important;
+  background-color: #fff !important;
+}
+
+.modal .btn-outline-secondary:hover,
+.modal-content .btn-outline-secondary:hover,
+button.btn-outline-secondary:hover {
+  color: #fff !important;
+  background-color: #6c757d !important;
+}
+
+.modal .btn-outline-info,
+.modal-content .btn-outline-info,
+button.btn-outline-info {
+  color: #0c5460 !important;
+  border-color: #17a2b8 !important;
+  background-color: #fff !important;
+}
+
+.modal .btn-outline-info:hover,
+.modal-content .btn-outline-info:hover,
+button.btn-outline-info:hover {
+  color: #fff !important;
+  background-color: #17a2b8 !important;
+}
+
+/* Đảm bảo icon trong nút cũng có màu đúng */
+.modal .btn-outline-warning i,
+.modal .btn-outline-success i,
+.modal .btn-outline-danger i,
+.modal .btn-outline-primary i,
+.modal .btn-outline-secondary i,
+.modal .btn-outline-info i {
+  color: inherit !important;
+}
+
+
+/* ==================== FIX DROPDOWN/SELECT TEXT COLOR ==================== */
+
+/* Fix cho các dropdown/select trong admin dashboard */
+.card-header select,
+.card-header .form-select,
+select.form-select,
+.form-select {
+  color: #212529 !important;
+  background-color: #fff !important;
+}
+
+.card-header select option,
+.card-header .form-select option,
+select.form-select option,
+.form-select option {
+  color: #212529 !important;
+  background-color: #fff !important;
+}
+
+/* Đảm bảo dropdown trong filter báo cáo hiển thị đúng */
+.nav-tabs + .card select,
+.nav-tabs + .card .form-select,
+.card .form-select,
+.card select {
+  color: #212529 !important;
+  background-color: #fff !important;
+}
+
+
+/* ==================== FIX GITHUB BUTTON ==================== */
+
+/* GitHub button - sử dụng màu text của theme */
+.github-btn {
+  color: var(--text-color, #6c757d) !important;
+  border-color: var(--text-color, #6c757d) !important;
+  background-color: transparent !important;
+}
+
+.github-btn:hover {
+  color: var(--card-background, #ffffff) !important;
+  background-color: var(--text-color, #6c757d) !important;
+  border-color: var(--text-color, #6c757d) !important;
 }

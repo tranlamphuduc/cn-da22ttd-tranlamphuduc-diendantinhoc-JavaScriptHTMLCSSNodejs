@@ -125,23 +125,35 @@ const Documents = () => {
       const contentDisposition = response.headers['content-disposition'];
       let filename = 'download.txt';
       
+      console.log('All response headers:', response.headers);
+      console.log('Content-Disposition header:', contentDisposition);
+      
       if (contentDisposition) {
-        console.log('Content-Disposition:', contentDisposition);
-        
         // Thử parse filename*=UTF-8'' format trước
         const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/);
         if (utf8Match) {
           filename = decodeURIComponent(utf8Match[1]);
+          console.log('Parsed UTF-8 filename:', filename);
         } else {
           // Fallback sang filename="..." format
           const normalMatch = contentDisposition.match(/filename="([^"]+)"/);
           if (normalMatch) {
             filename = normalMatch[1];
+            console.log('Parsed normal filename:', filename);
+          } else {
+            // Thử parse filename= format (không có quotes)
+            const simpleMatch = contentDisposition.match(/filename=([^;]+)/);
+            if (simpleMatch) {
+              filename = simpleMatch[1].trim();
+              console.log('Parsed simple filename:', filename);
+            }
           }
         }
+      } else {
+        console.log('No Content-Disposition header found');
       }
       
-      console.log('Download filename:', filename);
+      console.log('Final download filename:', filename);
       
       link.setAttribute('download', filename);
       document.body.appendChild(link);
@@ -222,7 +234,7 @@ const Documents = () => {
               <input
                 type="text"
                 className="form-control"
-                placeholder="Tìm kiếm tài liệu..."
+                placeholder="Tìm theo tên tài liệu hoặc người đăng..."
                 value={searchTerm}
                 onChange={(e) => handleFilterChange('search', e.target.value)}
               />
@@ -271,13 +283,17 @@ const Documents = () => {
                   <div key={document.id} className="col-md-6 col-lg-4 mb-4">
                     <div className="card h-100">
                       <div className="card-body d-flex flex-column">
-                        {/* File Icon */}
-                        <div className="text-center mb-3">
-                          <i className={`${getFileIcon(document.file_name)} fa-3x`}></i>
-                        </div>
+                        {/* File Icon - Clickable */}
+                        <Link to={`/documents/${document.id}`} className="text-decoration-none">
+                          <div className="text-center mb-3">
+                            <i className={`${getFileIcon(document.file_name)} fa-3x`}></i>
+                          </div>
+                        </Link>
 
-                        {/* Document Info */}
-                        <h6 className="card-title">{document.title}</h6>
+                        {/* Document Info - Clickable */}
+                        <Link to={`/documents/${document.id}`} className="text-decoration-none text-dark">
+                          <h6 className="card-title">{document.title}</h6>
+                        </Link>
                         
                         {document.description && (
                           <p className="card-text text-muted small">

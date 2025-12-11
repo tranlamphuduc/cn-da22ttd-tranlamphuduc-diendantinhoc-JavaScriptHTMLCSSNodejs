@@ -1,7 +1,7 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const db = require('../config/database');
-const { auth } = require('../middleware/auth');
+const { auth, checkBan } = require('../middleware/auth');
 const { createNotification } = require('./notifications');
 
 const router = express.Router();
@@ -72,7 +72,7 @@ router.get('/post/:postId', async (req, res) => {
 });
 
 // Tạo bình luận mới
-router.post('/', auth, [
+router.post('/', auth, checkBan('comment'), [
   body('content').notEmpty().withMessage('Nội dung bình luận không được để trống'),
   body('post_id').isInt().withMessage('ID bài viết không hợp lệ')
 ], async (req, res) => {

@@ -138,6 +138,66 @@ router.get('/me', auth, async (req, res) => {
   }
 });
 
+// Lấy theme settings của user
+router.get('/theme', auth, async (req, res) => {
+  try {
+    const [users] = await db.execute(
+      'SELECT theme_settings FROM users WHERE id = ?',
+      [req.user.id]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    }
+
+    res.json({ 
+      theme_settings: users[0].theme_settings ? JSON.parse(users[0].theme_settings) : null 
+    });
+  } catch (error) {
+    console.error('Error getting theme:', error);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+});
+
+// Lưu theme settings của user
+router.put('/theme', auth, async (req, res) => {
+  try {
+    const { theme_settings } = req.body;
+
+    if (!theme_settings || typeof theme_settings !== 'object') {
+      return res.status(400).json({ message: 'Theme settings không hợp lệ' });
+    }
+
+    await db.execute(
+      'UPDATE users SET theme_settings = ? WHERE id = ?',
+      [JSON.stringify(theme_settings), req.user.id]
+    );
+
+    res.json({ 
+      message: 'Lưu theme thành công',
+      theme_settings 
+    });
+  } catch (error) {
+    console.error('Error saving theme:', error);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+});
+
+// Reset theme về mặc định
+router.delete('/theme', auth, async (req, res) => {
+  try {
+    await db.execute(
+      'UPDATE users SET theme_settings = NULL WHERE id = ?',
+      [req.user.id]
+    );
+
+    res.json({ message: 'Đã reset theme về mặc định' });
+  } catch (error) {
+    console.error('Error resetting theme:', error);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+});
+
 // Cấu hình email transporter
 const createEmailTransporter = () => {
   return nodemailer.createTransport({

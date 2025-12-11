@@ -133,10 +133,10 @@ const ReportModal = ({ isOpen, onClose, reportType, targetId, targetTitle }) => 
                             </div>
                         </div>
                     ) : reportStatus && (
-                        <div className="report-status-info mb-3">
+                        <>
                             {/* Hiển thị cảnh báo nếu bị cấm */}
                             {reportStatus.is_banned && (
-                                <div className="alert alert-danger">
+                                <div className="alert alert-danger mb-3">
                                     <i className="fas fa-ban me-2"></i>
                                     <strong>Bạn đã bị cấm báo cáo!</strong>
                                     <p className="mb-0">
@@ -150,8 +150,8 @@ const ReportModal = ({ isOpen, onClose, reportType, targetId, targetTitle }) => 
                             )}
 
                             {/* Hiển thị cảnh báo nếu đạt giới hạn báo cáo */}
-                            {!reportStatus.is_banned && reportStatus.pending_reports_count >= 3 && (
-                                <div className="alert alert-warning">
+                            {!reportStatus.is_banned && Number(reportStatus.pending_reports_count) >= 3 && (
+                                <div className="alert alert-warning mb-3">
                                     <i className="fas fa-exclamation-triangle me-2"></i>
                                     <strong>Đã đạt giới hạn báo cáo!</strong>
                                     <p className="mb-0">
@@ -162,8 +162,8 @@ const ReportModal = ({ isOpen, onClose, reportType, targetId, targetTitle }) => 
                             )}
 
                             {/* Hiển thị cảnh báo nếu có lịch sử báo cáo sai */}
-                            {!reportStatus.is_banned && reportStatus.warning_count > 0 && reportStatus.warning_count < 3 && (
-                                <div className="alert alert-info">
+                            {!reportStatus.is_banned && Number(reportStatus.warning_count) > 0 && Number(reportStatus.warning_count) < 3 && (
+                                <div className="alert alert-info mb-3">
                                     <i className="fas fa-info-circle me-2"></i>
                                     <strong>Lưu ý:</strong> Bạn đã nhận {reportStatus.warning_count} cảnh báo do báo cáo sai. 
                                     Hãy cẩn thận khi gửi báo cáo để tránh bị cấm.
@@ -171,13 +171,13 @@ const ReportModal = ({ isOpen, onClose, reportType, targetId, targetTitle }) => 
                             )}
 
                             {/* Hiển thị số báo cáo đang chờ */}
-                            {!reportStatus.is_banned && reportStatus.pending_reports_count > 0 && reportStatus.pending_reports_count < 3 && (
-                                <div className="alert alert-light">
+                            {!reportStatus.is_banned && Number(reportStatus.pending_reports_count) > 0 && Number(reportStatus.pending_reports_count) < 3 && (
+                                <div className="alert alert-light mb-3">
                                     <i className="fas fa-clock me-2"></i>
                                     Bạn có {reportStatus.pending_reports_count}/3 báo cáo đang chờ xử lý.
                                 </div>
                             )}
-                        </div>
+                        </>
                     )}
 
                     {/* Form báo cáo - chỉ hiển thị nếu có thể báo cáo */}

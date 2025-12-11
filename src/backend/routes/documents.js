@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { body, validationResult } = require('express-validator');
 const db = require('../config/database');
-const { auth } = require('../middleware/auth');
+const { auth, checkBan } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -68,8 +68,8 @@ router.get('/', async (req, res) => {
     }
 
     if (search) {
-      query += ' AND (d.title LIKE ? OR d.description LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`);
+      query += ' AND (d.title LIKE ? OR d.description LIKE ? OR u.full_name LIKE ? OR u.username LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
     // Thêm sắp xếp theo lựa chọn
@@ -103,8 +103,8 @@ router.get('/', async (req, res) => {
     }
 
     if (search) {
-      countQuery += ' AND (d.title LIKE ? OR d.description LIKE ?)';
-      countParams.push(`%${search}%`, `%${search}%`);
+      countQuery += ' AND (d.title LIKE ? OR d.description LIKE ? OR EXISTS (SELECT 1 FROM users u WHERE u.id = d.user_id AND (u.full_name LIKE ? OR u.username LIKE ?)))';
+      countParams.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
     const [totalCount] = await db.execute(countQuery, countParams);
@@ -125,7 +125,7 @@ router.get('/', async (req, res) => {
 });
 
 // Upload tài liệu
-router.post('/upload', auth, upload.single('file'), [
+router.post('/upload', auth, checkBan('document'), upload.single('file'), [
   body('title').notEmpty().withMessage('Tiêu đề không được để trống'),
   body('category_id').isInt().withMessage('Danh mục không hợp lệ')
 ], async (req, res) => {
@@ -167,6 +167,30 @@ router.post('/upload', auth, upload.single('file'), [
     if (req.file && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+});
+
+// Lấy chi tiết tài liệu
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [documents] = await db.execute(`
+      SELECT d.*, u.username, u.full_name, u.avatar, c.name as category_name, c.color as category_color
+      FROM documents d
+      JOIN users u ON d.user_id = u.id
+      JOIN categories c ON d.category_id = c.id
+      WHERE d.id = ? AND d.is_approved = TRUE
+    `, [id]);
+
+    if (documents.length === 0) {
+      return res.status(404).json({ message: 'Không tìm thấy tài liệu' });
+    }
+
+    res.json({ document: documents[0] });
+  } catch (error) {
+    console.error('Error fetching document:', error);
     res.status(500).json({ message: 'Lỗi server' });
   }
 });

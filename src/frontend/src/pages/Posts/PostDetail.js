@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import ReportButton from '../../components/Reports/ReportButton';
+import BookmarkButton from '../../components/Bookmarks/BookmarkButton';
+import FollowButton from '../../components/Follows/FollowButton';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -9,6 +11,7 @@ import axios from 'axios';
 
 const PostDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { currentUser } = useAuth();
   const [post, setPost] = useState(null);
   const [comments, setComments] = useState([]);
@@ -19,11 +22,13 @@ const PostDetail = () => {
   const [replyContent, setReplyContent] = useState('');
   const [replyLoading, setReplyLoading] = useState(false);
   const [expandedReplies, setExpandedReplies] = useState(new Set());
+  const [postTags, setPostTags] = useState([]);
   const viewIncrementedRef = useRef(new Set());
 
   useEffect(() => {
     fetchPost();
     fetchComments();
+    fetchPostTags();
     
     // Tăng view chỉ một lần cho mỗi bài viết trong session
     if (!viewIncrementedRef.current.has(id)) {
@@ -42,6 +47,15 @@ const PostDetail = () => {
       setPost(response.data.post);
     } catch (error) {
       console.error('Error fetching post:', error);
+    }
+  };
+
+  const fetchPostTags = async () => {
+    try {
+      const response = await axios.get(`/api/tags/post/${id}`);
+      setPostTags(response.data.tags || []);
+    } catch (error) {
+      console.error('Error fetching post tags:', error);
     }
   };
 
@@ -109,6 +123,17 @@ const PostDetail = () => {
         console.error('Error deleting post:', error);
         alert('Có lỗi xảy ra khi xóa bài viết');
       }
+    }
+  };
+
+  const handleTogglePin = async () => {
+    try {
+      const response = await axios.patch(`/api/admin/posts/${post.id}/pin`);
+      setPost({ ...post, is_pinned: response.data.is_pinned });
+      alert(response.data.message);
+    } catch (error) {
+      console.error('Error toggling pin:', error);
+      alert('Có lỗi xảy ra');
     }
   };
 
@@ -324,10 +349,18 @@ const PostDetail = () => {
               </div>
 
               {/* Post Title */}
-              <h1 className="mb-4">{post.title}</h1>
+              <h1 className="mb-4">
+                {(post.is_pinned === 1 || post.is_pinned === true) && (
+                  <span className="badge bg-danger me-2" style={{ fontSize: '0.5em', verticalAlign: 'middle' }}>
+                    <i className="fas fa-thumbtack me-1"></i>
+                    Ghim
+                  </span>
+                )}
+                {post.title}
+              </h1>
 
               {/* Post Stats */}
-              <div className="d-flex align-items-center text-muted mb-4">
+              <div className="d-flex align-items-center text-muted mb-3">
                 <small className="me-3">
                   <i className="fas fa-eye me-1"></i>
                   {post.views} lượt xem
@@ -337,6 +370,22 @@ const PostDetail = () => {
                   {comments.length} bình luận
                 </small>
               </div>
+
+              {/* Post Tags */}
+              {postTags.length > 0 && (
+                <div className="mb-4">
+                  {postTags.map(tag => (
+                    <Link
+                      key={tag.id}
+                      to={`/tags/${tag.slug}`}
+                      className="badge bg-light text-dark text-decoration-none me-2 mb-1"
+                      style={{ fontSize: '0.85rem', padding: '6px 12px' }}
+                    >
+                      #{tag.name}
+                    </Link>
+                  ))}
+                </div>
+              )}
 
               {/* Post Content */}
               <div className="post-content">
@@ -408,7 +457,16 @@ const PostDetail = () => {
 
               {/* Post Actions */}
               <div className="post-actions mt-3 pt-3 border-top d-flex justify-content-between align-items-center">
-                <div>
+                <div className="d-flex gap-2 align-items-center">
+                  {/* Bookmark Button */}
+                  <BookmarkButton postId={post.id} />
+                  
+                  {/* Follow Author Button */}
+                  {currentUser && currentUser.id !== post.user_id && (
+                    <FollowButton userId={post.user_id} userName={post.full_name} />
+                  )}
+                  
+                  {/* Report Button */}
                   {currentUser && currentUser.id !== post.user_id && (
                     <ReportButton
                       reportType="post"
@@ -419,19 +477,44 @@ const PostDetail = () => {
                   )}
                 </div>
                 
-                {/* Admin Actions */}
-                {currentUser && currentUser.role === 'admin' && (
-                  <div className="admin-actions">
+                {/* Owner & Admin Actions */}
+                <div className="d-flex gap-2">
+                  {/* Pin Button - for admin only */}
+                  {currentUser && currentUser.role === 'admin' && (
+                    <button
+                      className={`btn btn-sm ${post.is_pinned === 1 || post.is_pinned === true ? 'btn-warning' : 'btn-outline-warning'}`}
+                      onClick={handleTogglePin}
+                      title={post.is_pinned === 1 || post.is_pinned === true ? 'Bỏ ghim bài viết' : 'Ghim bài viết lên đầu'}
+                    >
+                      <i className="fas fa-thumbtack me-1"></i>
+                      {post.is_pinned === 1 || post.is_pinned === true ? 'Bỏ ghim' : 'Ghim'}
+                    </button>
+                  )}
+                  
+                  {/* Edit Button - for owner */}
+                  {currentUser && currentUser.id === post.user_id && (
+                    <button
+                      className="btn btn-sm btn-outline-primary"
+                      onClick={() => navigate(`/posts/${post.id}/edit`)}
+                      title="Chỉnh sửa bài viết"
+                    >
+                      <i className="fas fa-edit me-1"></i>
+                      Sửa
+                    </button>
+                  )}
+                  
+                  {/* Delete Button - for owner or admin */}
+                  {currentUser && (currentUser.id === post.user_id || currentUser.role === 'admin') && (
                     <button
                       className="btn btn-sm btn-danger"
                       onClick={handleDeletePost}
-                      title="Xóa bài viết (Admin)"
+                      title="Xóa bài viết"
                     >
                       <i className="fas fa-trash me-1"></i>
-                      Xóa bài viết
+                      Xóa
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           </div>

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import ReportButton from '../../components/Reports/ReportButton';
 import ReportStatus from '../../components/Reports/ReportStatus';
+import FollowButton from '../../components/Follows/FollowButton';
 import Pagination from '../../components/Pagination/Pagination';
 import axios from 'axios';
 
@@ -14,6 +15,10 @@ const Profile = () => {
   const [documents, setDocuments] = useState([]);
   const [commentedPosts, setCommentedPosts] = useState([]);
   const [reports, setReports] = useState([]);
+  const [bookmarks, setBookmarks] = useState([]);
+  const [followingList, setFollowingList] = useState([]);
+  const [followersList, setFollowersList] = useState([]);
+  const [followStats, setFollowStats] = useState({ followers: 0, following: 0 });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('posts');
   const [isEditing, setIsEditing] = useState(false);
@@ -23,11 +28,14 @@ const Profile = () => {
     avatar: null
   });
   const [editLoading, setEditLoading] = useState(false);
+  const [notifications, setNotifications] = useState([]);
   const [pagination, setPagination] = useState({
     posts: { page: 1, limit: 10, total: 0, pages: 0 },
     documents: { page: 1, limit: 12, total: 0, pages: 0 },
     commentedPosts: { page: 1, limit: 10, total: 0, pages: 0 },
-    reports: { page: 1, limit: 10, total: 0, pages: 0 }
+    reports: { page: 1, limit: 10, total: 0, pages: 0 },
+    notifications: { page: 1, limit: 10, total: 0, pages: 0 },
+    bookmarks: { page: 1, limit: 10, total: 0, pages: 0 }
   });
 
   useEffect(() => {
@@ -43,8 +51,16 @@ const Profile = () => {
       fetchCommentedPosts();
     } else if (activeTab === 'reports') {
       fetchReports();
+    } else if (activeTab === 'notifications') {
+      fetchNotifications();
+    } else if (activeTab === 'bookmarks') {
+      fetchBookmarks();
+    } else if (activeTab === 'following') {
+      fetchFollowing();
+    } else if (activeTab === 'followers') {
+      fetchFollowers();
     }
-  }, [activeTab, pagination.posts.page, pagination.documents.page, pagination.commentedPosts.page, pagination.reports.page]);
+  }, [activeTab, pagination.posts.page, pagination.documents.page, pagination.commentedPosts.page, pagination.reports.page, pagination.notifications.page]);
 
   const fetchUserData = async () => {
     try {
@@ -58,6 +74,17 @@ const Profile = () => {
         avatar: null
       });
 
+      // Fetch follow stats
+      try {
+        const statsRes = await axios.get(`/api/follows/stats/${id}`);
+        setFollowStats(statsRes.data);
+      } catch (e) {
+        console.error('Error fetching follow stats:', e);
+      }
+
+      // Fetch tất cả số lượng cho các tab ngay khi load trang
+      await fetchAllCounts();
+
       // Fetch initial data for active tab
       if (activeTab === 'posts') {
         await fetchPosts();
@@ -68,6 +95,105 @@ const Profile = () => {
       console.error('Error fetching user data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch tất cả số lượng cho các tab
+  const fetchAllCounts = async () => {
+    try {
+      // Fetch posts count
+      const postsRes = await axios.get(`/api/users/${id}/posts`, { params: { page: 1, limit: 1 } });
+      setPagination(prev => ({
+        ...prev,
+        posts: { ...prev.posts, total: postsRes.data.pagination.total, pages: postsRes.data.pagination.pages }
+      }));
+
+      // Fetch documents count
+      const docsRes = await axios.get(`/api/users/${id}/documents`, { params: { page: 1, limit: 1 } });
+      setPagination(prev => ({
+        ...prev,
+        documents: { ...prev.documents, total: docsRes.data.pagination.total, pages: docsRes.data.pagination.pages }
+      }));
+
+      // Fetch commented posts count
+      const commentedRes = await axios.get(`/api/users/${id}/commented-posts`, { params: { page: 1, limit: 1 } });
+      setPagination(prev => ({
+        ...prev,
+        commentedPosts: { ...prev.commentedPosts, total: commentedRes.data.pagination.total, pages: commentedRes.data.pagination.pages }
+      }));
+
+      // Fetch counts chỉ cho chủ tài khoản
+      if (currentUser && currentUser.id === parseInt(id)) {
+        // Fetch bookmarks count
+        try {
+          const bookmarksRes = await axios.get('/api/bookmarks', { params: { page: 1, limit: 1 } });
+          setPagination(prev => ({
+            ...prev,
+            bookmarks: { ...prev.bookmarks, total: bookmarksRes.data.pagination.total, pages: bookmarksRes.data.pagination.pages }
+          }));
+        } catch (e) { console.error('Error fetching bookmarks count:', e); }
+
+        // Fetch reports count
+        try {
+          const reportsRes = await axios.get('/api/reports/my-reports', { params: { page: 1, limit: 1 } });
+          setPagination(prev => ({
+            ...prev,
+            reports: { ...prev.reports, total: reportsRes.data.pagination.total, pages: reportsRes.data.pagination.pages }
+          }));
+        } catch (e) { console.error('Error fetching reports count:', e); }
+
+        // Fetch notifications để hiển thị số chưa đọc
+        try {
+          const notificationsRes = await axios.get('/api/notifications');
+          setNotifications(notificationsRes.data.notifications || []);
+          setPagination(prev => ({
+            ...prev,
+            notifications: { ...prev.notifications, total: notificationsRes.data.notifications?.length || 0, pages: 1 }
+          }));
+        } catch (e) { console.error('Error fetching notifications count:', e); }
+      }
+    } catch (error) {
+      console.error('Error fetching counts:', error);
+    }
+  };
+
+  const fetchBookmarks = async () => {
+    try {
+      const response = await axios.get('/api/bookmarks', {
+        params: {
+          page: pagination.bookmarks.page,
+          limit: pagination.bookmarks.limit
+        }
+      });
+      setBookmarks(response.data.bookmarks);
+      setPagination(prev => ({
+        ...prev,
+        bookmarks: {
+          ...prev.bookmarks,
+          total: response.data.pagination.total,
+          pages: response.data.pagination.pages
+        }
+      }));
+    } catch (error) {
+      console.error('Error fetching bookmarks:', error);
+    }
+  };
+
+  const fetchFollowing = async () => {
+    try {
+      const response = await axios.get('/api/follows/following');
+      setFollowingList(response.data.following || []);
+    } catch (error) {
+      console.error('Error fetching following:', error);
+    }
+  };
+
+  const fetchFollowers = async () => {
+    try {
+      const response = await axios.get('/api/follows/followers');
+      setFollowersList(response.data.followers || []);
+    } catch (error) {
+      console.error('Error fetching followers:', error);
     }
   };
 
@@ -164,6 +290,58 @@ const Profile = () => {
       }));
     } catch (error) {
       console.error('Error fetching reports:', error);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await axios.get('/api/notifications');
+      setNotifications(response.data.notifications || []);
+      setPagination(prev => ({
+        ...prev,
+        notifications: {
+          ...prev.notifications,
+          total: response.data.notifications?.length || 0,
+          pages: 1
+        }
+      }));
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  const markNotificationAsRead = async (notificationId) => {
+    try {
+      await axios.put(`/api/notifications/${notificationId}/read`);
+      setNotifications(notifications.map(n => 
+        n.id === notificationId ? { ...n, is_read: true } : n
+      ));
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    try {
+      await axios.put('/api/notifications/mark-all-read');
+      setNotifications(notifications.map(n => ({ ...n, is_read: true })));
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
+  };
+
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'comment': return { icon: 'fas fa-comment', color: 'text-primary' };
+      case 'post_deleted': return { icon: 'fas fa-trash', color: 'text-danger' };
+      case 'comment_deleted': return { icon: 'fas fa-comment-slash', color: 'text-warning' };
+      case 'document_deleted': return { icon: 'fas fa-file-excel', color: 'text-danger' };
+      case 'report_warning': return { icon: 'fas fa-exclamation-triangle', color: 'text-warning' };
+      case 'penalty_reduced': return { icon: 'fas fa-gift', color: 'text-success' };
+      case 'user_banned': return { icon: 'fas fa-ban', color: 'text-danger' };
+      case 'user_unbanned': return { icon: 'fas fa-unlock', color: 'text-success' };
+      case 'admin_message': return { icon: 'fas fa-bullhorn', color: 'text-info' };
+      default: return { icon: 'fas fa-bell', color: 'text-info' };
     }
   };
 
@@ -276,14 +454,38 @@ const Profile = () => {
       const link = document.createElement('a');
       link.href = url;
       
+      // Parse filename từ Content-Disposition header
       const contentDisposition = response.headers['content-disposition'];
-      let filename = 'download';
+      let filename = 'download.txt';
+      
+      console.log('Profile - Content-Disposition header:', contentDisposition);
+      
       if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-        if (filenameMatch) {
-          filename = filenameMatch[1];
+        // Thử parse filename*=UTF-8'' format trước
+        const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/);
+        if (utf8Match) {
+          filename = decodeURIComponent(utf8Match[1]);
+          console.log('Profile - Parsed UTF-8 filename:', filename);
+        } else {
+          // Fallback sang filename="..." format
+          const normalMatch = contentDisposition.match(/filename="([^"]+)"/);
+          if (normalMatch) {
+            filename = normalMatch[1];
+            console.log('Profile - Parsed normal filename:', filename);
+          } else {
+            // Thử parse filename= format (không có quotes)
+            const simpleMatch = contentDisposition.match(/filename=([^;]+)/);
+            if (simpleMatch) {
+              filename = simpleMatch[1].trim();
+              console.log('Profile - Parsed simple filename:', filename);
+            }
+          }
         }
+      } else {
+        console.log('Profile - No Content-Disposition header found');
       }
+      
+      console.log('Profile - Final download filename:', filename);
       
       link.setAttribute('download', filename);
       document.body.appendChild(link);
@@ -462,6 +664,20 @@ const Profile = () => {
                         </button>
                       )}
                       
+                      {/* Follow Button (only for other users) */}
+                      {currentUser && currentUser.id !== parseInt(id) && (
+                        <FollowButton
+                          userId={id}
+                          userName={user.full_name}
+                          onFollowChange={(isFollowing) => {
+                            setFollowStats(prev => ({
+                              ...prev,
+                              followers: isFollowing ? prev.followers + 1 : prev.followers - 1
+                            }));
+                          }}
+                        />
+                      )}
+                      
                       {/* Report Button (only for other users) */}
                       {currentUser && currentUser.id !== parseInt(id) && (
                         <ReportButton
@@ -482,7 +698,7 @@ const Profile = () => {
         {/* Statistics */}
         <div className="col-12">
           <div className="row mb-4">
-            <div className="col-md-3">
+            <div className="col-6 col-md-2">
               <div className="stat-card text-center">
                 <div className="stat-icon text-primary mb-2">
                   <i className="fas fa-file-alt"></i>
@@ -491,7 +707,7 @@ const Profile = () => {
                 <div className="stat-label">Bài viết</div>
               </div>
             </div>
-            <div className="col-md-3">
+            <div className="col-6 col-md-2">
               <div className="stat-card text-center">
                 <div className="stat-icon text-success mb-2">
                   <i className="fas fa-comments"></i>
@@ -500,7 +716,7 @@ const Profile = () => {
                 <div className="stat-label">Bình luận</div>
               </div>
             </div>
-            <div className="col-md-3">
+            <div className="col-6 col-md-2">
               <div className="stat-card text-center">
                 <div className="stat-icon text-info mb-2">
                   <i className="fas fa-file-download"></i>
@@ -509,7 +725,25 @@ const Profile = () => {
                 <div className="stat-label">Tài liệu</div>
               </div>
             </div>
-            <div className="col-md-3">
+            <div className="col-6 col-md-2">
+              <div className="stat-card text-center">
+                <div className="stat-icon text-danger mb-2">
+                  <i className="fas fa-users"></i>
+                </div>
+                <div className="stat-number text-danger">{followStats.followers}</div>
+                <div className="stat-label">Người theo dõi</div>
+              </div>
+            </div>
+            <div className="col-6 col-md-2">
+              <div className="stat-card text-center">
+                <div className="stat-icon text-secondary mb-2">
+                  <i className="fas fa-user-friends"></i>
+                </div>
+                <div className="stat-number text-secondary">{followStats.following}</div>
+                <div className="stat-label">Đang theo dõi</div>
+              </div>
+            </div>
+            <div className="col-6 col-md-2">
               <div className="stat-card text-center">
                 <div className="stat-icon text-warning mb-2">
                   <i className="fas fa-trophy"></i>
@@ -517,7 +751,7 @@ const Profile = () => {
                 <div className="stat-number text-warning">
                   {user.post_count + user.comment_count + user.document_count}
                 </div>
-                <div className="stat-label">Điểm hoạt động</div>
+                <div className="stat-label">Điểm</div>
               </div>
             </div>
           </div>
@@ -541,7 +775,7 @@ const Profile = () => {
                 onClick={() => handleTabChange('documents')}
               >
                 <i className="fas fa-file-download me-2"></i>
-                Tài liệu ({pagination.documents.total})
+                Tài liệu ({pagination.documents.total || 0})
               </button>
             </li>
             <li className="nav-item">
@@ -550,20 +784,63 @@ const Profile = () => {
                 onClick={() => handleTabChange('commentedPosts')}
               >
                 <i className="fas fa-comment me-2"></i>
-                Đã bình luận ({pagination.commentedPosts.total})
+                Đã bình luận ({pagination.commentedPosts.total || 0})
               </button>
             </li>
-            {/* Chỉ hiển thị tab báo cáo cho chính chủ tài khoản */}
+            {/* Chỉ hiển thị các tab riêng tư cho chính chủ tài khoản */}
             {currentUser && currentUser.id === parseInt(id) && (
-              <li className="nav-item">
-                <button 
-                  className={`nav-link ${activeTab === 'reports' ? 'active' : ''}`}
-                  onClick={() => handleTabChange('reports')}
-                >
-                  <i className="fas fa-flag me-2"></i>
-                  Báo cáo của tôi ({pagination.reports.total})
-                </button>
-              </li>
+              <>
+                <li className="nav-item">
+                  <button 
+                    className={`nav-link ${activeTab === 'bookmarks' ? 'active' : ''}`}
+                    onClick={() => handleTabChange('bookmarks')}
+                  >
+                    <i className="fas fa-bookmark me-2 text-warning"></i>
+                    Đã lưu ({pagination.bookmarks.total || 0})
+                  </button>
+                </li>
+                <li className="nav-item">
+                  <button 
+                    className={`nav-link ${activeTab === 'following' ? 'active' : ''}`}
+                    onClick={() => handleTabChange('following')}
+                  >
+                    <i className="fas fa-user-friends me-2"></i>
+                    Đang theo dõi ({followStats.following})
+                  </button>
+                </li>
+                <li className="nav-item">
+                  <button 
+                    className={`nav-link ${activeTab === 'followers' ? 'active' : ''}`}
+                    onClick={() => handleTabChange('followers')}
+                  >
+                    <i className="fas fa-users me-2"></i>
+                    Người theo dõi ({followStats.followers})
+                  </button>
+                </li>
+                <li className="nav-item">
+                  <button 
+                    className={`nav-link ${activeTab === 'reports' ? 'active' : ''}`}
+                    onClick={() => handleTabChange('reports')}
+                  >
+                    <i className="fas fa-flag me-2"></i>
+                    Báo cáo của tôi ({pagination.reports.total || 0})
+                  </button>
+                </li>
+                <li className="nav-item">
+                  <button 
+                    className={`nav-link ${activeTab === 'notifications' ? 'active' : ''}`}
+                    onClick={() => handleTabChange('notifications')}
+                  >
+                    <i className="fas fa-bell me-2 text-primary"></i>
+                    Thông báo ({pagination.notifications.total || 0})
+                    {notifications.filter(n => !n.is_read).length > 0 && (
+                      <span className="badge bg-danger ms-1">
+                        {notifications.filter(n => !n.is_read).length}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              </>
             )}
           </ul>
 
@@ -934,6 +1211,269 @@ const Profile = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Notifications Tab - Only for own profile */}
+          {activeTab === 'notifications' && currentUser && currentUser.id === parseInt(id) && (
+            <div className="row">
+              <div className="col-12">
+                <div className="card">
+                  <div className="card-header d-flex justify-content-between align-items-center">
+                    <h6 className="mb-0">
+                      <i className="fas fa-bell me-2"></i>
+                      Tất cả thông báo
+                    </h6>
+                    {notifications.filter(n => !n.is_read).length > 0 && (
+                      <button 
+                        className="btn btn-sm btn-outline-primary"
+                        onClick={markAllNotificationsAsRead}
+                      >
+                        <i className="fas fa-check-double me-1"></i>
+                        Đánh dấu tất cả đã đọc
+                      </button>
+                    )}
+                  </div>
+                  <div className="card-body p-0">
+                    {notifications.length > 0 ? (
+                      <div className="list-group list-group-flush">
+                        {notifications.map(notification => {
+                          const { icon, color } = getNotificationIcon(notification.type);
+                          return (
+                            <div 
+                              key={notification.id}
+                              className={`list-group-item ${!notification.is_read ? 'bg-light' : ''}`}
+                            >
+                              <div className="d-flex">
+                                <div className="me-3">
+                                  <div 
+                                    className="rounded-circle bg-light d-flex align-items-center justify-content-center"
+                                    style={{ width: '45px', height: '45px' }}
+                                  >
+                                    <i className={`${icon} ${color}`}></i>
+                                  </div>
+                                </div>
+                                <div className="flex-grow-1">
+                                  <div className="d-flex justify-content-between align-items-start">
+                                    <div>
+                                      <h6 className="mb-1">
+                                        {notification.title}
+                                        {!notification.is_read && (
+                                          <span className="badge bg-primary ms-2">Mới</span>
+                                        )}
+                                      </h6>
+                                      <p className="mb-2" style={{ whiteSpace: 'pre-wrap' }}>
+                                        {notification.message}
+                                      </p>
+                                      <small className="text-muted">
+                                        <i className="fas fa-clock me-1"></i>
+                                        {formatDate(notification.created_at)}
+                                      </small>
+                                    </div>
+                                    {!notification.is_read && (
+                                      <button
+                                        className="btn btn-sm btn-outline-secondary"
+                                        onClick={() => markNotificationAsRead(notification.id)}
+                                        title="Đánh dấu đã đọc"
+                                      >
+                                        <i className="fas fa-check"></i>
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-5">
+                        <i className="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                        <h5>Chưa có thông báo nào</h5>
+                        <p className="text-muted">Bạn chưa nhận được thông báo nào.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Bookmarks Tab - Only for own profile */}
+          {activeTab === 'bookmarks' && currentUser && currentUser.id === parseInt(id) && (
+            <div className="row">
+              {bookmarks.length > 0 ? (
+                bookmarks.map(bookmark => (
+                  <div key={bookmark.bookmark_id} className="col-12 mb-3">
+                    <div className="post-card">
+                      <div className="d-flex justify-content-between align-items-start mb-2">
+                        <div className="d-flex align-items-center">
+                          <Link to={`/profile/${bookmark.user_id}`}>
+                            {bookmark.avatar ? (
+                              <img src={bookmark.avatar} alt="Avatar" className="avatar me-3" />
+                            ) : (
+                              <div className="avatar me-3 bg-primary d-flex align-items-center justify-content-center text-white">
+                                {bookmark.full_name?.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </Link>
+                          <div>
+                            <Link to={`/profile/${bookmark.user_id}`} className="text-decoration-none">
+                              <h6 className="mb-0 text-dark">{bookmark.full_name}</h6>
+                            </Link>
+                            <small className="text-muted">@{bookmark.username}</small>
+                          </div>
+                        </div>
+                        <span 
+                          className="category-badge text-white"
+                          style={{ backgroundColor: bookmark.category_color || '#007bff' }}
+                        >
+                          {bookmark.category_name}
+                        </span>
+                      </div>
+                      <h5 className="mb-2">
+                        <Link to={`/posts/${bookmark.id}`} className="text-decoration-none text-dark">
+                          {bookmark.title}
+                        </Link>
+                      </h5>
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div className="text-muted small">
+                          <span className="me-3">
+                            <i className="fas fa-eye me-1"></i>
+                            {bookmark.views} lượt xem
+                          </span>
+                          <span className="me-3">
+                            <i className="fas fa-bookmark me-1 text-warning"></i>
+                            Đã lưu {formatDate(bookmark.bookmarked_at)}
+                          </span>
+                        </div>
+                        <Link to={`/posts/${bookmark.id}`} className="btn btn-outline-primary btn-sm">
+                          Xem bài viết
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="col-12">
+                  <div className="text-center py-5">
+                    <i className="far fa-bookmark fa-3x text-muted mb-3"></i>
+                    <h5>Chưa có bài viết nào được lưu</h5>
+                    <p className="text-muted">Nhấn vào nút "Lưu" trên các bài viết để lưu lại đọc sau</p>
+                  </div>
+                </div>
+              )}
+              
+              {bookmarks.length > 0 && (
+                <div className="col-12">
+                  <Pagination
+                    currentPage={pagination.bookmarks.page}
+                    totalPages={pagination.bookmarks.pages}
+                    onPageChange={(page) => handlePageChange('bookmarks', page)}
+                    totalItems={pagination.bookmarks.total}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Following Tab - Only for own profile */}
+          {activeTab === 'following' && currentUser && currentUser.id === parseInt(id) && (
+            <div className="row">
+              {followingList.length > 0 ? (
+                followingList.map(followedUser => (
+                  <div key={followedUser.follow_id} className="col-md-6 col-lg-4 mb-3">
+                    <div className="card h-100">
+                      <div className="card-body">
+                        <div className="d-flex align-items-center">
+                          <Link to={`/profile/${followedUser.id}`}>
+                            {followedUser.avatar ? (
+                              <img src={followedUser.avatar} alt="Avatar" className="avatar me-3" />
+                            ) : (
+                              <div className="avatar me-3 bg-primary d-flex align-items-center justify-content-center text-white">
+                                {followedUser.full_name?.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </Link>
+                          <div className="flex-grow-1">
+                            <Link to={`/profile/${followedUser.id}`} className="text-decoration-none">
+                              <h6 className="mb-0 text-dark">{followedUser.full_name}</h6>
+                            </Link>
+                            <small className="text-muted">@{followedUser.username}</small>
+                            <div className="text-muted small mt-1">
+                              <i className="fas fa-file-alt me-1"></i>
+                              {followedUser.post_count} bài viết
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-3">
+                          <Link to={`/profile/${followedUser.id}`} className="btn btn-outline-primary btn-sm w-100">
+                            Xem hồ sơ
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="col-12">
+                  <div className="text-center py-5">
+                    <i className="fas fa-user-friends fa-3x text-muted mb-3"></i>
+                    <h5>Chưa theo dõi ai</h5>
+                    <p className="text-muted">Theo dõi người dùng khác để nhận thông báo khi họ đăng bài mới</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Followers Tab - Only for own profile */}
+          {activeTab === 'followers' && currentUser && currentUser.id === parseInt(id) && (
+            <div className="row">
+              {followersList.length > 0 ? (
+                followersList.map(follower => (
+                  <div key={follower.follow_id} className="col-md-6 col-lg-4 mb-3">
+                    <div className="card h-100">
+                      <div className="card-body">
+                        <div className="d-flex align-items-center">
+                          <Link to={`/profile/${follower.id}`}>
+                            {follower.avatar ? (
+                              <img src={follower.avatar} alt="Avatar" className="avatar me-3" />
+                            ) : (
+                              <div className="avatar me-3 bg-secondary d-flex align-items-center justify-content-center text-white">
+                                {follower.full_name?.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </Link>
+                          <div className="flex-grow-1">
+                            <Link to={`/profile/${follower.id}`} className="text-decoration-none">
+                              <h6 className="mb-0 text-dark">{follower.full_name}</h6>
+                            </Link>
+                            <small className="text-muted">@{follower.username}</small>
+                            <div className="text-muted small mt-1">
+                              <i className="fas fa-file-alt me-1"></i>
+                              {follower.post_count} bài viết
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-3">
+                          <Link to={`/profile/${follower.id}`} className="btn btn-outline-primary btn-sm w-100">
+                            Xem hồ sơ
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="col-12">
+                  <div className="text-center py-5">
+                    <i className="fas fa-users fa-3x text-muted mb-3"></i>
+                    <h5>Chưa có người theo dõi</h5>
+                    <p className="text-muted">Đăng bài viết chất lượng để thu hút người theo dõi</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -27,11 +27,13 @@
     align-items: center;
     padding: 20px;
     border-bottom: 1px solid #eee;
+    background-color: #ffffff;
 }
 
 .report-modal-header h3 {
     margin: 0;
-    color: #333;
+    color: #212529 !important;
+    font-size: 1.25rem;
 }
 
 .close-btn {
@@ -39,7 +41,7 @@
     border: none;
     font-size: 24px;
     cursor: pointer;
-    color: #666;
+    color: #212529 !important;
     padding: 0;
     width: 30px;
     height: 30px;
@@ -57,11 +59,16 @@
 }
 
 .report-target {
-    background-color: #f8f9fa;
+    background-color: #e9ecef;
     padding: 12px;
     border-radius: 4px;
     margin-bottom: 20px;
     border-left: 4px solid #007bff;
+    color: #212529;
+}
+
+.report-target * {
+    color: #212529;
 }
 
 .form-group {
@@ -98,7 +105,7 @@
 }
 
 .form-group small {
-    color: #666;
+    color: #495057;
     font-size: 12px;
     margin-top: 4px;
     display: block;
@@ -170,4 +177,165 @@
     .form-actions button {
         width: 100%;
     }
+}
+
+/* ====
+================ FIX TEXT COLORS ==================== */
+
+/* Tất cả text trong modal phải đen đậm */
+.report-modal,
+.report-modal * {
+    color: #212529;
+}
+
+/* Alert boxes */
+.report-modal .alert {
+    color: #212529;
+}
+
+.report-modal .alert-info {
+    background-color: #cff4fc;
+    border-color: #b6effb;
+    color: #055160;
+}
+
+.report-modal .alert-info * {
+    color: #055160;
+}
+
+.report-modal .alert-warning {
+    background-color: #fff3cd;
+    border-color: #ffecb5;
+    color: #664d03;
+}
+
+.report-modal .alert-warning * {
+    color: #664d03;
+}
+
+.report-modal .alert-danger {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #842029;
+}
+
+.report-modal .alert-danger * {
+    color: #842029;
+}
+
+.report-modal .alert-light {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+    color: #212529;
+}
+
+.report-modal .alert-light * {
+    color: #212529;
+}
+
+/* Text muted */
+.report-modal .text-muted {
+    color: #495057 !important;
+}
+
+/* Character count */
+.report-modal small {
+    color: #495057;
+}
+
+/* Header title */
+.report-modal-header h3 {
+    color: #212529;
+}
+
+/* Labels */
+.report-modal label {
+    color: #212529;
+}
+
+/* Buttons text */
+.report-modal .form-actions button {
+    color: #ffffff;
+}
+
+
+/* ==================== FIX REPORT STATUS INFO ==================== */
+
+/* Report status info section */
+.report-status-info {
+    color: #212529 !important;
+}
+
+.report-status-info * {
+    color: #212529 !important;
+}
+
+/* Override cho alert trong status info */
+.report-status-info .alert-info,
+.report-status-info .alert-info * {
+    color: #055160 !important;
+}
+
+.report-status-info .alert-warning,
+.report-status-info .alert-warning * {
+    color: #664d03 !important;
+}
+
+.report-status-info .alert-danger,
+.report-status-info .alert-danger * {
+    color: #842029 !important;
+}
+
+.report-status-info .alert-light,
+.report-status-info .alert-light * {
+    color: #212529 !important;
+}
+
+/* Modal body - tất cả text đen */
+.report-modal-body {
+    color: #212529 !important;
+}
+
+.report-modal-body * {
+    color: #212529 !important;
+}
+
+/* Ngoại trừ buttons */
+.report-modal-body .form-actions button,
+.report-modal-body .btn {
+    color: #ffffff !important;
+}
+
+/* Ngoại trừ alerts */
+.report-modal-body .alert-info,
+.report-modal-body .alert-info * {
+    color: #055160 !important;
+}
+
+.report-modal-body .alert-warning,
+.report-modal-body .alert-warning * {
+    color: #664d03 !important;
+}
+
+.report-modal-body .alert-danger,
+.report-modal-body .alert-danger * {
+    color: #842029 !important;
+}
+
+
+/* Ẩn text node trực tiếp trong modal body */
+.report-modal-body {
+    font-size: 0;
+}
+
+.report-modal-body > * {
+    font-size: 14px;
+}
+
+.report-modal-body .report-target,
+.report-modal-body .alert,
+.report-modal-body form,
+.report-modal-body .form-group,
+.report-modal-body .text-center {
+    font-size: 14px;
 }

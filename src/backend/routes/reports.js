@@ -88,7 +88,27 @@ router.post('/',
 
             const connection = await mysql.createConnection(dbConfig);
 
-            // Kiểm tra xem người dùng có bị cấm báo cáo không
+            // Kiểm tra xem người dùng có bị cấm báo cáo từ bảng user_bans không
+            const [userBanCheck] = await connection.execute(
+                'SELECT * FROM user_bans WHERE user_id = ? AND ban_type = "report" AND is_active = TRUE AND (ban_until IS NULL OR ban_until > NOW())',
+                [reporter_id]
+            );
+
+            if (userBanCheck.length > 0) {
+                const ban = userBanCheck[0];
+                const banMessage = ban.ban_until 
+                    ? `Bạn đã bị cấm báo cáo đến ${new Date(ban.ban_until).toLocaleString('vi-VN')}.${ban.reason ? ` Lý do: ${ban.reason}` : ''}`
+                    : `Bạn đã bị cấm báo cáo vĩnh viễn.${ban.reason ? ` Lý do: ${ban.reason}` : ''}`;
+                
+                await connection.end();
+                return res.status(403).json({ 
+                    message: banMessage,
+                    banned: true,
+                    ban_until: ban.ban_until
+                });
+            }
+
+            // Kiểm tra xem người dùng có bị cấm báo cáo từ report_warnings không (legacy)
             const [warningCheck] = await connection.execute(
                 'SELECT * FROM report_warnings WHERE user_id = ? AND (is_banned_from_reporting = TRUE AND (ban_until IS NULL OR ban_until > NOW()))',
                 [reporter_id]
@@ -246,7 +266,7 @@ router.put('/:id/status',
     authenticateToken, 
     requireAdmin,
     [
-        body('status').isIn(['reviewed', 'resolved', 'dismissed']).withMessage('Trạng thái không hợp lệ'),
+        body('status').isIn(['pending', 'reviewed', 'resolved', 'dismissed']).withMessage('Trạng thái không hợp lệ'),
         body('admin_note').optional().isLength({ max: 500 }).withMessage('Ghi chú không được quá 500 ký tự'),
         body('is_false_report').optional().isBoolean().withMessage('is_false_report phải là boolean')
     ],
@@ -283,7 +303,8 @@ router.put('/:id/status',
             );
 
             // Nếu báo cáo bị đánh dấu là sai, xử lý cảnh báo cho người báo cáo
-            if (is_false_report && (status === 'dismissed' || status === 'resolved')) {
+            // Chỉ xử lý nếu trước đó chưa được đánh dấu là báo cáo sai
+            if (is_false_report && !report.is_false_report) {
                 await handleFalseReportWarning(connection, report.reporter_id);
             }
 

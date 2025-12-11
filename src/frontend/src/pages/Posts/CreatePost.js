@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import TagInput from '../../components/Tags/TagInput';
 
 const CreatePost = () => {
   const [formData, setFormData] = useState({
     title: '',
     content: '',
-    category_id: ''
+    category_id: '',
+    tags: []
   });
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -102,6 +104,15 @@ const CreatePost = () => {
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label">Tags</label>
+                  <TagInput
+                    selectedTags={formData.tags}
+                    onChange={(tags) => setFormData({ ...formData, tags })}
+                    maxTags={10}
+                  />
                 </div>
 
                 <div className="mb-3">

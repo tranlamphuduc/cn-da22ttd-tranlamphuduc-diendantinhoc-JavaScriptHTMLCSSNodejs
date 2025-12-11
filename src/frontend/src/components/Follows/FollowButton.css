@@ -1,0 +1,82 @@
+.follow-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border: 1px solid #007bff;
+  background: #007bff;
+  color: white;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.follow-btn:hover {
+  background: #0056b3;
+  border-color: #0056b3;
+}
+
+.follow-btn.following {
+  background: transparent;
+  border-color: #28a745;
+  color: #28a745;
+}
+
+.follow-btn.following:hover {
+  background: #dc3545;
+  border-color: #dc3545;
+  color: white;
+}
+
+.follow-btn.following:hover i::before {
+  content: "\f506"; /* fa-user-minus */
+}
+
+.follow-btn.following:hover span {
+  display: none;
+}
+
+.follow-btn.following:hover::after {
+  content: "Bỏ theo dõi";
+  margin-left: 4px;
+}
+
+.follow-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.follow-btn i {
+  font-size: 12px;
+}
+
+/* Category Follow Button */
+.category-follow-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border: 1px solid #6c757d;
+  background: transparent;
+  color: #6c757d;
+  border-radius: 15px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.category-follow-btn:hover {
+  background: #f8f9fa;
+}
+
+.category-follow-btn.following {
+  background: #e8f5e9;
+  border-color: #28a745;
+  color: #28a745;
+}
+
+.category-follow-btn.following:hover {
+  background: #ffebee;
+  border-color: #dc3545;
+  color: #dc3545;
+}

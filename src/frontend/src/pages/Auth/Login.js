@@ -25,13 +25,13 @@ const Login = () => {
     setError('');
 
     const result = await login(formData.username, formData.password);
-    
+
     if (result.success) {
       navigate('/');
     } else {
       setError(result.message);
     }
-    
+
     setLoading(false);
   };
 

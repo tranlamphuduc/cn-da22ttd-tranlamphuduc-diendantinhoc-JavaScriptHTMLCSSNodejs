@@ -52,27 +52,33 @@ const Navbar = () => {
                   </Link>
                 </li>
                 <li className="nav-item">
-                  <Link className="nav-link" to="/upload-document">
-                    <i className="fas fa-upload me-1"></i>
-                    Tải lên tài liệu
-                  </Link>
-                </li>
-                <li className="nav-item">
                   <Link className="nav-link" to="/my-reports">
                     <i className="fas fa-flag me-1"></i>
                     Báo cáo của tôi
                   </Link>
                 </li>
-                {process.env.NODE_ENV === 'development' && (
-                  <li className="nav-item">
-                    <Link className="nav-link text-warning" to="/test-notifications">
-                      <i className="fas fa-bell me-1"></i>
-                      Test Thông báo
-                    </Link>
-                  </li>
-                )}
               </>
             )}
+            <li className="nav-item dropdown">
+              <a className="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                <i className="fas fa-info-circle me-1"></i>
+                Thông tin
+              </a>
+              <ul className="dropdown-menu">
+                <li>
+                  <Link className="dropdown-item" to="/rules">
+                    <i className="fas fa-gavel me-2"></i>
+                    Quy tắc diễn đàn
+                  </Link>
+                </li>
+                <li>
+                  <Link className="dropdown-item" to="/contact">
+                    <i className="fas fa-envelope me-2"></i>
+                    Liên hệ
+                  </Link>
+                </li>
+              </ul>
+            </li>
           </ul>
 
           <ul className="navbar-nav">

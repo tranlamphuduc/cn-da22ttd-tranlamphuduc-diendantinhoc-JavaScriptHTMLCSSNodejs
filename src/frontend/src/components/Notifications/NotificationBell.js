@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import './NotificationBell.css';
 
 const NotificationBell = () => {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -229,19 +231,17 @@ const NotificationBell = () => {
             )}
           </div>
 
-          {notifications.length > 0 && (
-            <div className="notification-footer">
-              <button 
-                className="btn btn-sm btn-outline-primary w-100"
-                onClick={() => {
-                  setIsOpen(false);
-                  // Có thể thêm link đến trang thông báo chi tiết
-                }}
-              >
-                Xem tất cả thông báo
-              </button>
-            </div>
-          )}
+          <div className="notification-footer">
+            <button 
+              className="btn btn-sm btn-outline-primary w-100"
+              onClick={() => {
+                setIsOpen(false);
+                navigate('/notifications');
+              }}
+            >
+              Xem tất cả thông báo
+            </button>
+          </div>
         </div>
       )}
     </div>

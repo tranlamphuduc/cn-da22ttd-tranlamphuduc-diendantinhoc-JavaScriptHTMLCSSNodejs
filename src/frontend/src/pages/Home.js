@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Pagination from '../components/Pagination/Pagination';
+import SearchBar from '../components/Search/SearchBar';
 
 const Home = () => {
   const [posts, setPosts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [popularTags, setPopularTags] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -23,7 +25,7 @@ const Home = () => {
 
   const fetchData = async () => {
     try {
-      const [postsRes, categoriesRes] = await Promise.all([
+      const [postsRes, categoriesRes, tagsRes] = await Promise.all([
         axios.get('/api/posts', {
           params: {
             category: selectedCategory,
@@ -33,11 +35,13 @@ const Home = () => {
             limit: pagination.limit
           }
         }),
-        axios.get('/api/categories')
+        axios.get('/api/categories'),
+        axios.get('/api/tags?limit=15')
       ]);
 
       setPosts(postsRes.data.posts);
       setCategories(categoriesRes.data.categories);
+      setPopularTags(tagsRes.data.tags || []);
       setPagination(prev => ({
         ...prev,
         total: postsRes.data.pagination.total,
@@ -113,17 +117,11 @@ const Home = () => {
           {/* Search and Filter */}
           <div className="card mb-4">
             <div className="card-body">
-              <div className="row">
-                <div className="col-md-5">
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Tìm kiếm bài viết..."
-                    value={searchTerm}
-                    onChange={(e) => handleFilterChange('search', e.target.value)}
-                  />
+              <div className="row align-items-center">
+                <div className="col-md-5 mb-2 mb-md-0">
+                  <SearchBar onSearch={(term) => handleFilterChange('search', term)} />
                 </div>
-                <div className="col-md-4">
+                <div className="col-md-4 mb-2 mb-md-0">
                   <select
                     className="form-select"
                     value={selectedCategory}
@@ -150,6 +148,18 @@ const Home = () => {
                   </select>
                 </div>
               </div>
+              {searchTerm && (
+                <div className="mt-2">
+                  <span className="badge bg-primary me-2">
+                    Tìm kiếm: "{searchTerm}"
+                    <button 
+                      className="btn-close btn-close-white ms-2" 
+                      style={{ fontSize: '0.6rem' }}
+                      onClick={() => handleFilterChange('search', '')}
+                    ></button>
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -177,12 +187,20 @@ const Home = () => {
                           <small className="text-muted">@{post.username}</small>
                         </div>
                       </div>
-                      <span 
-                        className="category-badge text-white"
-                        style={{ backgroundColor: post.category_color || '#007bff' }}
-                      >
-                        {post.category_name}
-                      </span>
+                      <div className="d-flex align-items-center gap-2">
+                        {post.is_pinned === 1 || post.is_pinned === true ? (
+                          <span className="badge bg-danger">
+                            <i className="fas fa-thumbtack me-1"></i>
+                            Ghim
+                          </span>
+                        ) : null}
+                        <span 
+                          className="category-badge text-white"
+                          style={{ backgroundColor: post.category_color || '#007bff' }}
+                        >
+                          {post.category_name}
+                        </span>
+                      </div>
                     </div>
 
                     <h5 className="mb-3">
@@ -197,6 +215,25 @@ const Home = () => {
                     <p className="text-muted mb-3">
                       {truncateContent(post.content)}
                     </p>
+
+                    {/* Tags */}
+                    {post.tags && post.tags.length > 0 && (
+                      <div className="mb-3">
+                        {post.tags.slice(0, 5).map(tag => (
+                          <Link
+                            key={tag.id}
+                            to={`/tags/${tag.slug}`}
+                            className="badge bg-light text-dark text-decoration-none me-1"
+                            style={{ fontSize: '0.75rem' }}
+                          >
+                            #{tag.name}
+                          </Link>
+                        ))}
+                        {post.tags.length > 5 && (
+                          <span className="badge bg-secondary">+{post.tags.length - 5}</span>
+                        )}
+                      </div>
+                    )}
 
                     <div className="d-flex justify-content-between align-items-center">
                       <div className="d-flex align-items-center text-muted">
@@ -299,6 +336,41 @@ const Home = () => {
               </Link>
             </div>
           </div>
+
+          {/* Popular Tags */}
+          {popularTags.length > 0 && (
+            <div className="sidebar">
+              <h5 className="mb-3">
+                <i className="fas fa-hashtag me-2"></i>
+                Tags phổ biến
+              </h5>
+              <div className="d-flex flex-wrap gap-2">
+                {popularTags.map(tag => (
+                  <Link
+                    key={tag.id}
+                    to={`/tags/${tag.slug}`}
+                    className="badge bg-light text-dark text-decoration-none"
+                    style={{ 
+                      padding: '6px 12px', 
+                      fontSize: '0.85rem',
+                      border: '1px solid #dee2e6',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => {
+                      e.target.style.background = '#667eea';
+                      e.target.style.color = 'white';
+                    }}
+                    onMouseOut={(e) => {
+                      e.target.style.background = '#f8f9fa';
+                      e.target.style.color = '#212529';
+                    }}
+                  >
+                    #{tag.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Statistics */}
           <div className="sidebar">
