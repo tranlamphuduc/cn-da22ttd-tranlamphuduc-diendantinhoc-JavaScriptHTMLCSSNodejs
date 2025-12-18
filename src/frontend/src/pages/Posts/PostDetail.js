@@ -101,27 +101,53 @@ const PostDetail = () => {
   };
 
   const handleDeleteComment = async (commentId) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa bình luận này?')) {
+    const reason = window.prompt('Nhập lý do xóa bình luận (bắt buộc):');
+    if (reason && reason.trim()) {
       try {
-        await axios.delete(`/api/admin/comments/${commentId}`);
+        await axios.delete(`/api/admin/comments/${commentId}`, {
+          data: { reason: reason.trim() }
+        });
         setComments(comments.filter(comment => comment.id !== commentId));
-        alert('Đã xóa bình luận thành công');
+        alert('Đã xóa bình luận thành công và gửi thông báo cho tác giả');
       } catch (error) {
         console.error('Error deleting comment:', error);
         alert('Có lỗi xảy ra khi xóa bình luận');
       }
+    } else if (reason !== null) {
+      alert('Vui lòng nhập lý do xóa bình luận');
     }
   };
 
   const handleDeletePost = async () => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
-      try {
-        await axios.delete(`/api/admin/posts/${post.id}`);
-        alert('Đã xóa bài viết thành công');
-        window.location.href = '/';
-      } catch (error) {
-        console.error('Error deleting post:', error);
-        alert('Có lỗi xảy ra khi xóa bài viết');
+    // Nếu là chủ bài viết xóa bài của mình
+    if (currentUser && currentUser.id === post.user_id) {
+      if (window.confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
+        try {
+          await axios.delete(`/api/posts/${post.id}`);
+          alert('Đã xóa bài viết thành công');
+          window.location.href = '/';
+        } catch (error) {
+          console.error('Error deleting post:', error);
+          alert('Có lỗi xảy ra khi xóa bài viết');
+        }
+      }
+    } 
+    // Nếu là admin xóa bài của người khác
+    else if (currentUser && currentUser.role === 'admin') {
+      const reason = window.prompt('Nhập lý do xóa bài viết (bắt buộc):');
+      if (reason && reason.trim()) {
+        try {
+          await axios.delete(`/api/admin/posts/${post.id}`, {
+            data: { reason: reason.trim() }
+          });
+          alert('Đã xóa bài viết thành công và gửi thông báo cho tác giả');
+          window.location.href = '/';
+        } catch (error) {
+          console.error('Error deleting post:', error);
+          alert('Có lỗi xảy ra khi xóa bài viết');
+        }
+      } else if (reason !== null) {
+        alert('Vui lòng nhập lý do xóa bài viết');
       }
     }
   };

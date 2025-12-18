@@ -141,7 +141,7 @@ const UploadDocument = () => {
                 <i className="fas fa-upload me-2"></i>
                 Tải lên tài liệu
               </h4>
-              <p className="mb-0 text-light">Chọn file (PDF, DOCX, PPTX, hình ảnh)</p>
+              <p className="mb-0 text-light">Chọn file (PDF, DOCX, PPTX, hình ảnh) - Tối đa 50MB</p>
             </div>
             <div className="card-body">
               {error && (
@@ -154,7 +154,7 @@ const UploadDocument = () => {
                 {/* File Upload Area */}
                 <div className="mb-4">
                   <label className="form-label">
-                    Chọn file (PDF, DOCX, PPTX, hình ảnh) <span className="text-danger">*</span>
+                    Chọn file (PDF, DOCX, PPTX, hình ảnh) - Tối đa 50MB <span className="text-danger">*</span>
                   </label>
                   <div
                     className={`file-upload-area ${dragOver ? 'dragover' : ''}`}
@@ -200,6 +200,7 @@ const UploadDocument = () => {
                       </div>
                     )}
                   </div>
+                  
                 </div>
 
                 {/* Category Selection */}

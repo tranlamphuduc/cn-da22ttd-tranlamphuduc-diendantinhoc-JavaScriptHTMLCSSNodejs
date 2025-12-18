@@ -56,6 +56,13 @@ const Dashboard = () => {
     reports: ''
   });
 
+  // States for user search (tìm kiếm theo người dùng)
+  const [userSearchTerms, setUserSearchTerms] = useState({
+    posts: '',
+    documents: '',
+    comments: ''
+  });
+
   // States for penalty management modal
   const [penaltyModal, setPenaltyModal] = useState({
     isOpen: false,
@@ -90,10 +97,12 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [pagination.users.page, pagination.posts.page]);
+  }, [pagination.users.page]);
 
   useEffect(() => {
-    if (activeTab === 'reports') {
+    if (activeTab === 'posts') {
+      fetchPosts();
+    } else if (activeTab === 'reports') {
       fetchReports();
     } else if (activeTab === 'documents') {
       fetchDocuments();
@@ -104,19 +113,17 @@ const Dashboard = () => {
     } else if (activeTab === 'comments') {
       fetchComments();
     }
-  }, [activeTab, reportFilters, pagination.documents.page, pagination.comments.page]);
+  }, [activeTab, reportFilters, pagination.posts.page, pagination.documents.page, pagination.comments.page]);
 
   const fetchDashboardData = async () => {
     try {
-      const [statsRes, usersRes, postsRes] = await Promise.all([
+      const [statsRes, usersRes] = await Promise.all([
         axios.get('/api/admin/dashboard'),
-        axios.get(`/api/admin/users?page=${pagination.users.page}&limit=${pagination.users.limit}`),
-        axios.get(`/api/admin/posts?page=${pagination.posts.page}&limit=${pagination.posts.limit}`)
+        axios.get(`/api/admin/users?page=${pagination.users.page}&limit=${pagination.users.limit}`)
       ]);
 
       setStats(statsRes.data.stats);
       setUsers(usersRes.data.users);
-      setPosts(postsRes.data.posts);
 
       // Update pagination info
       setPagination(prev => ({
@@ -125,17 +132,36 @@ const Dashboard = () => {
           ...prev.users,
           total: usersRes.data.pagination.total,
           pages: usersRes.data.pagination.pages
-        },
-        posts: {
-          ...prev.posts,
-          total: postsRes.data.pagination.total,
-          pages: postsRes.data.pagination.pages
         }
       }));
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch posts với tìm kiếm
+  const fetchPosts = async () => {
+    try {
+      const queryParams = new URLSearchParams();
+      queryParams.append('page', pagination.posts.page);
+      queryParams.append('limit', pagination.posts.limit);
+      if (searchTerms.posts) queryParams.append('search', searchTerms.posts);
+      if (userSearchTerms.posts) queryParams.append('searchUser', userSearchTerms.posts);
+
+      const response = await axios.get(`/api/admin/posts?${queryParams}`);
+      setPosts(response.data.posts);
+      setPagination(prev => ({
+        ...prev,
+        posts: {
+          ...prev.posts,
+          total: response.data.pagination.total,
+          pages: response.data.pagination.pages
+        }
+      }));
+    } catch (error) {
+      console.error('Error fetching posts:', error);
     }
   };
 
@@ -160,7 +186,13 @@ const Dashboard = () => {
 
   const fetchDocuments = async () => {
     try {
-      const response = await axios.get(`/api/admin/documents?page=${pagination.documents.page}&limit=${pagination.documents.limit}`);
+      const queryParams = new URLSearchParams();
+      queryParams.append('page', pagination.documents.page);
+      queryParams.append('limit', pagination.documents.limit);
+      if (searchTerms.documents) queryParams.append('search', searchTerms.documents);
+      if (userSearchTerms.documents) queryParams.append('searchUser', userSearchTerms.documents);
+
+      const response = await axios.get(`/api/admin/documents?${queryParams}`);
       setDocuments(response.data.documents);
       setPagination(prev => ({
         ...prev,
@@ -177,7 +209,13 @@ const Dashboard = () => {
 
   const fetchComments = async () => {
     try {
-      const response = await axios.get(`/api/admin/comments?page=${pagination.comments.page}&limit=${pagination.comments.limit}`);
+      const queryParams = new URLSearchParams();
+      queryParams.append('page', pagination.comments.page);
+      queryParams.append('limit', pagination.comments.limit);
+      if (searchTerms.comments) queryParams.append('search', searchTerms.comments);
+      if (userSearchTerms.comments) queryParams.append('searchUser', userSearchTerms.comments);
+
+      const response = await axios.get(`/api/admin/comments?${queryParams}`);
       setComments(response.data.comments);
       setPagination(prev => ({
         ...prev,
@@ -390,9 +428,38 @@ const Dashboard = () => {
     setSearchTerms(prev => ({ ...prev, [tabType]: value }));
   };
 
-  // Filter data based on search terms
+  // User search functionality (tìm kiếm theo người dùng)
+  const handleUserSearchChange = (tabType, value) => {
+    setUserSearchTerms(prev => ({ ...prev, [tabType]: value }));
+  };
+
+  // Thực hiện tìm kiếm (gọi API)
+  const handleSearch = (tabType) => {
+    // Reset về trang 1 khi tìm kiếm
+    setPagination(prev => ({
+      ...prev,
+      [tabType]: { ...prev[tabType], page: 1 }
+    }));
+    
+    if (tabType === 'posts') {
+      fetchPosts();
+    } else if (tabType === 'documents') {
+      fetchDocuments();
+    } else if (tabType === 'comments') {
+      fetchComments();
+    }
+  };
+
+  // Xử lý Enter để tìm kiếm
+  const handleSearchKeyPress = (e, tabType) => {
+    if (e.key === 'Enter') {
+      handleSearch(tabType);
+    }
+  };
+
+  // Filter data based on search terms (chỉ dùng cho users và reports - client-side)
   const getFilteredData = (data, tabType) => {
-    const searchTerm = searchTerms[tabType].toLowerCase();
+    const searchTerm = searchTerms[tabType]?.toLowerCase() || '';
     if (!searchTerm) return data;
 
     return data.filter(item => {
@@ -401,20 +468,8 @@ const Dashboard = () => {
           return item.full_name.toLowerCase().includes(searchTerm) ||
                  item.username.toLowerCase().includes(searchTerm) ||
                  item.email.toLowerCase().includes(searchTerm);
-        case 'posts':
-          return item.title.toLowerCase().includes(searchTerm) ||
-                 item.full_name.toLowerCase().includes(searchTerm) ||
-                 item.category_name.toLowerCase().includes(searchTerm);
-        case 'documents':
-          return item.title.toLowerCase().includes(searchTerm) ||
-                 item.full_name.toLowerCase().includes(searchTerm) ||
-                 item.category_name.toLowerCase().includes(searchTerm);
-        case 'comments':
-          return item.content.toLowerCase().includes(searchTerm) ||
-                 item.full_name.toLowerCase().includes(searchTerm) ||
-                 item.post_title.toLowerCase().includes(searchTerm);
         case 'reports':
-          return item.reporter_name.toLowerCase().includes(searchTerm) ||
+          return item.reporter_name?.toLowerCase().includes(searchTerm) ||
                  (item.reported_content_name && item.reported_content_name.toLowerCase().includes(searchTerm));
         default:
           return true;
@@ -1022,21 +1077,44 @@ const Dashboard = () => {
       {/* Posts Tab */}
       {activeTab === 'posts' && (
         <div className="card">
-          <div className="card-header d-flex justify-content-between align-items-center">
-            <h5 className="mb-0">Quản lý bài viết</h5>
-            <div className="d-flex gap-2">
-              <div className="input-group" style={{ width: '300px' }}>
+          <div className="card-header">
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <h5 className="mb-0">Quản lý bài viết</h5>
+            </div>
+            <div className="d-flex gap-2 flex-wrap">
+              <div className="input-group" style={{ width: '250px' }}>
                 <span className="input-group-text">
-                  <i className="fas fa-search"></i>
+                  <i className="fas fa-file-alt"></i>
                 </span>
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="Tìm kiếm bài viết..."
+                  placeholder="Tìm theo tiêu đề..."
                   value={searchTerms.posts}
                   onChange={(e) => handleSearchChange('posts', e.target.value)}
+                  onKeyPress={(e) => handleSearchKeyPress(e, 'posts')}
                 />
               </div>
+              <div className="input-group" style={{ width: '250px' }}>
+                <span className="input-group-text">
+                  <i className="fas fa-user"></i>
+                </span>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Tìm theo người dùng..."
+                  value={userSearchTerms.posts}
+                  onChange={(e) => handleUserSearchChange('posts', e.target.value)}
+                  onKeyPress={(e) => handleSearchKeyPress(e, 'posts')}
+                />
+              </div>
+              <button 
+                className="btn btn-primary"
+                onClick={() => handleSearch('posts')}
+              >
+                <i className="fas fa-search me-1"></i>
+                Tìm kiếm
+              </button>
             </div>
           </div>
           <div className="card-body">
@@ -1054,7 +1132,7 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {getFilteredData(posts, 'posts').map(post => (
+                  {posts.map(post => (
                     <tr key={post.id}>
                       <td>
                         <div className="fw-bold">
@@ -1118,21 +1196,44 @@ const Dashboard = () => {
       {/* Documents Tab */}
       {activeTab === 'documents' && (
         <div className="card">
-          <div className="card-header d-flex justify-content-between align-items-center">
-            <h5 className="mb-0">Quản lý tài liệu</h5>
-            <div className="d-flex gap-2">
-              <div className="input-group" style={{ width: '300px' }}>
+          <div className="card-header">
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <h5 className="mb-0">Quản lý tài liệu</h5>
+            </div>
+            <div className="d-flex gap-2 flex-wrap">
+              <div className="input-group" style={{ width: '250px' }}>
                 <span className="input-group-text">
-                  <i className="fas fa-search"></i>
+                  <i className="fas fa-file-alt"></i>
                 </span>
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="Tìm kiếm tài liệu..."
+                  placeholder="Tìm theo tiêu đề..."
                   value={searchTerms.documents}
                   onChange={(e) => handleSearchChange('documents', e.target.value)}
+                  onKeyPress={(e) => handleSearchKeyPress(e, 'documents')}
                 />
               </div>
+              <div className="input-group" style={{ width: '250px' }}>
+                <span className="input-group-text">
+                  <i className="fas fa-user"></i>
+                </span>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Tìm theo người dùng..."
+                  value={userSearchTerms.documents}
+                  onChange={(e) => handleUserSearchChange('documents', e.target.value)}
+                  onKeyPress={(e) => handleSearchKeyPress(e, 'documents')}
+                />
+              </div>
+              <button 
+                className="btn btn-primary"
+                onClick={() => handleSearch('documents')}
+              >
+                <i className="fas fa-search me-1"></i>
+                Tìm kiếm
+              </button>
             </div>
           </div>
           <div className="card-body">
@@ -1150,7 +1251,7 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {getFilteredData(documents, 'documents').map(document => (
+                  {documents.map(document => (
                     <tr key={document.id}>
                       <td>
                         <div className="d-flex align-items-center">
@@ -1295,21 +1396,44 @@ const Dashboard = () => {
       {/* Comments Tab */}
       {activeTab === 'comments' && (
         <div className="card">
-          <div className="card-header d-flex justify-content-between align-items-center">
-            <h5 className="mb-0">Quản lý bình luận</h5>
-            <div className="d-flex gap-2">
-              <div className="input-group" style={{ width: '300px' }}>
+          <div className="card-header">
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <h5 className="mb-0">Quản lý bình luận</h5>
+            </div>
+            <div className="d-flex gap-2 flex-wrap">
+              <div className="input-group" style={{ width: '250px' }}>
                 <span className="input-group-text">
-                  <i className="fas fa-search"></i>
+                  <i className="fas fa-comment"></i>
                 </span>
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="Tìm kiếm bình luận..."
+                  placeholder="Tìm theo nội dung/bài viết..."
                   value={searchTerms.comments}
                   onChange={(e) => handleSearchChange('comments', e.target.value)}
+                  onKeyPress={(e) => handleSearchKeyPress(e, 'comments')}
                 />
               </div>
+              <div className="input-group" style={{ width: '250px' }}>
+                <span className="input-group-text">
+                  <i className="fas fa-user"></i>
+                </span>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Tìm theo người dùng..."
+                  value={userSearchTerms.comments}
+                  onChange={(e) => handleUserSearchChange('comments', e.target.value)}
+                  onKeyPress={(e) => handleSearchKeyPress(e, 'comments')}
+                />
+              </div>
+              <button 
+                className="btn btn-primary"
+                onClick={() => handleSearch('comments')}
+              >
+                <i className="fas fa-search me-1"></i>
+                Tìm kiếm
+              </button>
             </div>
           </div>
           <div className="card-body">
@@ -1325,7 +1449,7 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {getFilteredData(comments, 'comments').map(comment => (
+                  {comments.map(comment => (
                     <tr key={comment.id}>
                       <td>
                         <div className="comment-content">

@@ -296,19 +296,47 @@ router.get('/posts', adminAuth, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
+    const searchUser = req.query.searchUser || '';
     const offset = (page - 1) * limit;
 
-    const [posts] = await db.execute(`
-      SELECT p.*, u.username, u.full_name, c.name as category_name,
+    let query = `
+      SELECT p.*, u.username, u.full_name, c.name as category_name, c.color as category_color,
              (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count
       FROM posts p
       JOIN users u ON p.user_id = u.id
       JOIN categories c ON p.category_id = c.id
-      ORDER BY p.created_at DESC
-      LIMIT ? OFFSET ?
-    `, [limit, offset]);
+      WHERE 1=1
+    `;
+    let countQuery = `
+      SELECT COUNT(*) as count FROM posts p
+      JOIN users u ON p.user_id = u.id
+      WHERE 1=1
+    `;
+    const params = [];
+    const countParams = [];
 
-    const [totalCount] = await db.execute('SELECT COUNT(*) as count FROM posts');
+    // Tìm kiếm theo tiêu đề bài viết
+    if (search) {
+      query += ' AND (p.title LIKE ? OR p.content LIKE ?)';
+      countQuery += ' AND (p.title LIKE ? OR p.content LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`);
+      countParams.push(`%${search}%`, `%${search}%`);
+    }
+
+    // Tìm kiếm theo người dùng
+    if (searchUser) {
+      query += ' AND (u.full_name LIKE ? OR u.username LIKE ?)';
+      countQuery += ' AND (u.full_name LIKE ? OR u.username LIKE ?)';
+      params.push(`%${searchUser}%`, `%${searchUser}%`);
+      countParams.push(`%${searchUser}%`, `%${searchUser}%`);
+    }
+
+    query += ' ORDER BY p.created_at DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    const [posts] = await db.execute(query, params);
+    const [totalCount] = await db.execute(countQuery, countParams);
 
     res.json({
       posts,
@@ -371,18 +399,46 @@ router.get('/documents', adminAuth, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
+    const searchUser = req.query.searchUser || '';
     const offset = (page - 1) * limit;
 
-    const [documents] = await db.execute(`
+    let query = `
       SELECT d.*, u.username, u.full_name, c.name as category_name, c.color as category_color
       FROM documents d
       JOIN users u ON d.user_id = u.id
       JOIN categories c ON d.category_id = c.id
-      ORDER BY d.created_at DESC
-      LIMIT ? OFFSET ?
-    `, [limit, offset]);
+      WHERE 1=1
+    `;
+    let countQuery = `
+      SELECT COUNT(*) as count FROM documents d
+      JOIN users u ON d.user_id = u.id
+      WHERE 1=1
+    `;
+    const params = [];
+    const countParams = [];
 
-    const [totalCount] = await db.execute('SELECT COUNT(*) as count FROM documents');
+    // Tìm kiếm theo tiêu đề tài liệu
+    if (search) {
+      query += ' AND (d.title LIKE ? OR d.description LIKE ? OR d.file_name LIKE ?)';
+      countQuery += ' AND (d.title LIKE ? OR d.description LIKE ? OR d.file_name LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      countParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+
+    // Tìm kiếm theo người dùng
+    if (searchUser) {
+      query += ' AND (u.full_name LIKE ? OR u.username LIKE ?)';
+      countQuery += ' AND (u.full_name LIKE ? OR u.username LIKE ?)';
+      params.push(`%${searchUser}%`, `%${searchUser}%`);
+      countParams.push(`%${searchUser}%`, `%${searchUser}%`);
+    }
+
+    query += ' ORDER BY d.created_at DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    const [documents] = await db.execute(query, params);
+    const [totalCount] = await db.execute(countQuery, countParams);
 
     res.json({
       documents,
@@ -453,19 +509,47 @@ router.get('/comments', adminAuth, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
+    const searchUser = req.query.searchUser || '';
     const offset = (page - 1) * limit;
 
-    const [comments] = await db.execute(`
+    let query = `
       SELECT c.*, u.username, u.full_name, p.title as post_title
       FROM comments c
       JOIN users u ON c.user_id = u.id
       JOIN posts p ON c.post_id = p.id
       WHERE c.is_approved = TRUE
-      ORDER BY c.created_at DESC
-      LIMIT ? OFFSET ?
-    `, [limit, offset]);
+    `;
+    let countQuery = `
+      SELECT COUNT(*) as count FROM comments c
+      JOIN users u ON c.user_id = u.id
+      JOIN posts p ON c.post_id = p.id
+      WHERE c.is_approved = TRUE
+    `;
+    const params = [];
+    const countParams = [];
 
-    const [totalCount] = await db.execute('SELECT COUNT(*) as count FROM comments WHERE is_approved = TRUE');
+    // Tìm kiếm theo nội dung bình luận hoặc tiêu đề bài viết
+    if (search) {
+      query += ' AND (c.content LIKE ? OR p.title LIKE ?)';
+      countQuery += ' AND (c.content LIKE ? OR p.title LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`);
+      countParams.push(`%${search}%`, `%${search}%`);
+    }
+
+    // Tìm kiếm theo người dùng
+    if (searchUser) {
+      query += ' AND (u.full_name LIKE ? OR u.username LIKE ?)';
+      countQuery += ' AND (u.full_name LIKE ? OR u.username LIKE ?)';
+      params.push(`%${searchUser}%`, `%${searchUser}%`);
+      countParams.push(`%${searchUser}%`, `%${searchUser}%`);
+    }
+
+    query += ' ORDER BY c.created_at DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    const [comments] = await db.execute(query, params);
+    const [totalCount] = await db.execute(countQuery, countParams);
 
     res.json({
       comments,
